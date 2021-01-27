@@ -1,0 +1,10 @@
+target_sources(oops-compiler
+PRIVATE
+operator_trie.h
+operator_trie.cpp
+lexer.h
+lexer.cpp
+token.h
+converters.h
+converters.cpp
+)
