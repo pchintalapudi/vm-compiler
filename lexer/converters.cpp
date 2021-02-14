@@ -95,6 +95,7 @@ mappings::mappings() {
     map_keyword(keywords::DOUBLE, "double");
     map_keyword(keywords::ELSE, "else");
     map_keyword(keywords::ENUM, "enum");
+    map_keyword(keywords::EXTENDS, "extends");
     map_keyword(keywords::FALSE, "false");
     map_keyword(keywords::FINAL, "final");
     map_keyword(keywords::FINALLY, "finally");
@@ -104,8 +105,10 @@ mappings::mappings() {
     map_keyword(keywords::GOTO, "goto");
     map_keyword(keywords::IF, "if");
     map_keyword(keywords::IMPORT, "import");
+    map_keyword(keywords::IMPLEMENTS, "implements");
     map_keyword(keywords::INT, "int");
     map_keyword(keywords::INTERFACE, "interface");
+    map_keyword(keywords::INSTANCEOF, "instanceof");
     map_keyword(keywords::INTRINSIC, "intrinsic");
     map_keyword(keywords::LONG, "long");
     map_keyword(keywords::NATIVE, "native");
@@ -120,7 +123,6 @@ mappings::mappings() {
     map_keyword(keywords::SET, "set");
     map_keyword(keywords::SHORT, "short");
     map_keyword(keywords::STATIC, "static");
-    map_keyword(keywords::SUB, "sub");
     map_keyword(keywords::SUPER, "super");
     map_keyword(keywords::SWITCH, "switch");
     map_keyword(keywords::THIS, "this");
