@@ -3,6 +3,8 @@
 
 #include <array>
 #include <optional>
+#include <vector>
+
 #include "converters.h"
 
 namespace oops_compiler {
@@ -43,6 +45,20 @@ class operator_trie {
   }
   bool parent_full() const {
       return this->parent_full_operator;
+  }
+
+  void get_elements(std::vector<std::string> &out, std::string &root) const {
+    if (this->full_operator != operators::__COUNT__) {
+      out.push_back(root);
+    }
+    root.push_back('\0');
+    for (std::size_t i = 0; i < this->subtries.size(); i++) {
+      if (this->subtries[i]) {
+        root[root.size() - 1] = static_cast<char>(i);
+        this->subtries[i]->get_elements(out, root);
+      }
+    }
+    root.pop_back();
   }
 
   ~operator_trie();

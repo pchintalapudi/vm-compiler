@@ -47,6 +47,8 @@ struct context {
            std::tie(other.class_name, other.method_name, other.line_number,
                     other.char_number, other.global_char_number);
   }
+
+  std::string to_string() const;
 };
 
 struct message {
@@ -69,6 +71,8 @@ struct message {
   bool operator<(level lvl) const { return this->log_level < lvl; }
 
   bool operator<(stage stg) const { return this->produced_at < stg; }
+
+  std::string to_string() const;
 };
 
 }  // namespace logger

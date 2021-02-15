@@ -44,6 +44,7 @@ struct token {
 
   data token_data;
   logger::context token_context;
+  std::string to_string() const;
 };
 }  // namespace lexer
 }  // namespace oops_compiler

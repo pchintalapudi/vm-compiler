@@ -7,4 +7,5 @@ lexer.cpp
 token.h
 converters.h
 converters.cpp
+token.cpp
 )

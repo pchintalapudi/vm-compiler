@@ -13,6 +13,7 @@ add_subdirectory(compiler)
 add_subdirectory(lexer)
 add_subdirectory(logger)
 add_subdirectory(parser)
+add_subdirectory(files)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O0 -Wextra -Wall -Winit-self -Wold-style-cast -Woverloaded-virtual -Wuninitialized -Winit-self -Wno-unknown-pragmas -fsanitize=undefined -fsanitize-undefined-trap-on-error")
 

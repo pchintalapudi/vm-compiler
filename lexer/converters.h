@@ -55,6 +55,7 @@ enum class operators {
   ROUND_CLOSE,
   ROUND_OPEN,
   SCOPE,
+  SEMICOLON,
   SQUARE_CLOSE,
   SQUARE_OPEN,
   SUB,

@@ -67,6 +67,7 @@ mappings::mappings() {
     map_operator(operators::ROUND_CLOSE, ")");
     map_operator(operators::ROUND_OPEN, "(");
     map_operator(operators::SCOPE, "::");
+    map_operator(operators::SEMICOLON, ";");
     map_operator(operators::SQUARE_CLOSE, "]");
     map_operator(operators::SQUARE_OPEN, "[");
     map_operator(operators::SUB, "-");

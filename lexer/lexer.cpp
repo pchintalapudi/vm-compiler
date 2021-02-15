@@ -1,6 +1,7 @@
 #include "lexer.h"
 
 #include <algorithm>
+#include <iostream>
 #include <sstream>
 
 #include "converters.h"
@@ -14,6 +15,12 @@ lexer::lexer(const void *file, std::size_t file_size, const char *filename)
   for (unsigned i = 0; i < static_cast<unsigned>(operators::__COUNT__); i++) {
     this->root.insert(all_mappings.operators_to_strings[i],
                       static_cast<operators>(i));
+  }
+  std::vector<std::string> out;
+  std::string base;
+  this->root.get_elements(out, base);
+  for (const auto &str : out) {
+    std::cout << "Operator " << str << "\n";
   }
 }
 
@@ -76,7 +83,8 @@ std::variant<std::int64_t, std::string> parse_int(const char *str,
                                                   std::size_t length,
                                                   int radix = 10) {
   try {
-    return std::stol(std::string(str, length), 0, radix);
+    std::cout << "parse int " << std::string(str, length) << "\n";
+    return std::stoll(std::string(str, length), 0, radix);
   } catch (const std::overflow_error &) {
     return std::string("Long literal too large!!!");
   } catch (const std::invalid_argument &) {
@@ -119,6 +127,12 @@ struct lexer_variables {
   }
   void set_as_integer_token() {
     int radix = 10;
+    std::cout << "INTEGER " << deferred_token.token_data.as_deferred.size
+              << " \""
+              << std::string(deferred_token.token_data.as_deferred.start,
+                             deferred_token.token_data.as_deferred.size)
+              << "\""
+              << "\n";
     if (deferred_token.token_data.as_deferred.start[0] == '0') {
       switch (deferred_token.token_data.as_deferred.size) {
         case 1:
@@ -127,7 +141,7 @@ struct lexer_variables {
           deferred_token.token_data.as_literal.literal_type =
               token::data::literal::type::INTEGER;
           deferred_token.token_data.as_literal.as_integer = 0;
-          break;
+          return;
         case 2:
           builder.builder << "Integer literals may not begin with 0, except "
                              "for the literal 0 and when the 0 is followed by "
@@ -159,8 +173,16 @@ struct lexer_variables {
           break;
       }
     }
-    auto maybe = parse_int(deferred_token.token_data.as_deferred.start,
-                           deferred_token.token_data.as_deferred.size, radix);
+    std::variant<std::int64_t, std::string> maybe;
+    if (radix != 10) {
+      deferred_token.token_data.as_deferred.start += 2;
+      maybe = parse_int(deferred_token.token_data.as_deferred.start,
+                        deferred_token.token_data.as_deferred.size - 2, radix);
+      deferred_token.token_data.as_deferred.start -= 2;
+    } else {
+      maybe = parse_int(deferred_token.token_data.as_deferred.start,
+                        deferred_token.token_data.as_deferred.size, radix);
+    }
     if (std::holds_alternative<std::int64_t>(maybe)) {
       deferred_token.token_data.token_type = token::data::type::LITERAL_TOKEN;
       deferred_token.token_data.as_literal.literal_type =
@@ -178,7 +200,7 @@ struct lexer_variables {
       case 'f':
       case 'F': {
         if (deferred_token.token_data.as_deferred.size < 3 ||
-            deferred_token.token_data.as_deferred.start[0] != 0 ||
+            deferred_token.token_data.as_deferred.start[0] != '0' ||
             (deferred_token.token_data.as_deferred.start[1] != 'x' &&
              deferred_token.token_data.as_deferred.start[1] != 'X')) {
           auto maybe = parse_float(deferred_token.token_data.as_deferred.start,
@@ -208,7 +230,7 @@ struct lexer_variables {
       case 'd':
       case 'D': {
         if (deferred_token.token_data.as_deferred.size < 3 ||
-            deferred_token.token_data.as_deferred.start[0] != 0 ||
+            deferred_token.token_data.as_deferred.start[0] != '0' ||
             (deferred_token.token_data.as_deferred.start[1] != 'x' &&
              deferred_token.token_data.as_deferred.start[1] != 'X')) {
           auto maybe = parse_double(deferred_token.token_data.as_deferred.start,
@@ -240,7 +262,8 @@ struct lexer_variables {
         for (std::int64_t i = 1; i < deferred_token.token_data.as_deferred.size;
              i++) {
           if (deferred_token.token_data.as_deferred.start[i] == 'e' ||
-              deferred_token.token_data.as_deferred.start[i] == 'E') {
+              deferred_token.token_data.as_deferred.start[i] == 'E' ||
+              deferred_token.token_data.as_deferred.start[i] == '.') {
             auto maybe =
                 parse_double(deferred_token.token_data.as_deferred.start,
                              deferred_token.token_data.as_deferred.size);
@@ -255,7 +278,7 @@ struct lexer_variables {
               builder.builder << std::get<std::string>(maybe);
               build_message(oops_compiler::logger::level::ERROR);
             }
-            break;
+            return;
           }
         }
         set_as_integer_token();
@@ -274,6 +297,7 @@ struct lexer_variables {
         deferred_token.token_data.as_keyword = it->second;
       }
       out->output.push_back(deferred_token);
+      std::cout << deferred_token.to_string() << std::endl;
       deferred_token.token_data.token_type = token::data::type::DEFERRED_TOKEN;
       deferred_token.token_context.global_char_number = -1;
     }
@@ -283,7 +307,7 @@ struct lexer_variables {
       deferred_token.token_context = context;
       deferred_token.token_data.as_deferred.size = 0;
       deferred_token.token_data.as_deferred.start =
-          start + context.global_char_number;
+          start + context.global_char_number - 1;
     }
     deferred_token.token_data.as_deferred.size++;
   }
@@ -298,20 +322,81 @@ lexer_variables init_lexer_values(oops_compiler::lexer::lexed_output *output) {
 }  // namespace
 
 lexed_output lexer::lex() {
+  std::cout << "Lexing"
+            << "\n";
   lexed_output out{};
   out.filename = this->filename;
   lexer_variables variables = init_lexer_values(&out);
+  variables.start = this->file;
+  variables.end = variables.start + this->file_size;
+  std::cout << "Initialized"
+            << "\n";
+  std::cout << variables.start << " " << variables.end << std::endl;
   while (variables.start + variables.context.global_char_number <
          variables.end) {
-    if (auto op = parse_operator(variables.start, variables.end, &this->root)) {
+    std::cout << "Loop context " << variables.context.to_string() << "\n";
+    if (auto op = parse_operator(
+            variables.start + variables.context.global_char_number,
+            variables.end, &this->root)) {
+      if (op->second == operators::ACCESS &&
+          variables.deferred_token.token_context.global_char_number > -1 &&
+          isdigit(variables.deferred_token.token_data.as_deferred.start[0])) {
+        variables.context.global_char_number++;
+        variables.context.char_number++;
+        variables.extend_token();
+        continue;
+      }
+      variables.flush_token();
       switch (op->second) {
+        case operators::LINE_COMMENT:
+          variables.context.global_char_number += op->first;
+          variables.context.char_number += op->first;
+          while (variables.start + ++variables.context.global_char_number <
+                     variables.end &&
+                 variables.start[variables.context.global_char_number] != '\n')
+            ;
+          break;
+        case operators::BLOCK_COMMENT_OPEN: {
+          auto context = variables.context;
+          variables.context.global_char_number += op->first;
+          variables.context.char_number += op->first;
+          while (variables.start + variables.context.global_char_number <
+                 variables.end - 1) {
+            switch (variables.start[variables.context.global_char_number]) {
+              case '*':
+                if (variables.start[variables.context.global_char_number + 1] ==
+                    '/') {
+                  variables.context.global_char_number += 2;
+                  variables.context.char_number += 2;
+                  goto comment_end;
+                }
+                break;
+              case '\n':
+                variables.context.global_char_number++;
+                variables.context.line_number++;
+                variables.context.char_number = -1;
+                break;
+              default:
+                variables.context.global_char_number++;
+                variables.context.char_number++;
+            }
+          }
+          variables.builder.builder << "Unclosed comment literal!";
+          std::swap(variables.context, context);
+          variables.build_message(logger::level::FATAL_ERROR);
+          std::swap(variables.context, context);
+          break;
+        comment_end:
+          break;
+        }
         default:
-          variables.flush_token();
           out.output.push_back(token{
               .token_data =
                   token::data{.token_type = token::data::type::OPERATOR_TOKEN,
                               .as_operator = op->second},
               .token_context = variables.context});
+          std::cout << out.output[out.output.size() - 1].to_string()
+                    << std::endl;
           variables.context.global_char_number += op->first;
           variables.context.char_number += op->first;
       }
@@ -342,7 +427,8 @@ lexed_output lexer::lex() {
       }
     }
   }
-  if (*std::max_element(out.messages.begin(), out.messages.end()) <
+  std::cout << "Out of loop\n";
+  if (!out.messages.size() || *std::max_element(out.messages.begin(), out.messages.end()) <
       logger::level::ERROR) {
     variables.builder.builder << "Successfully lexed file " << this->filename
                               << "!";
