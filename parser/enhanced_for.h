@@ -12,6 +12,7 @@ class enhanced_for_statement : public statement {
     const statement &get_declaration();
     const expression& get_iterable();
     const statement& get_body();
+    static std::pair<enhanced_for_statement, std::size_t> parse(std::vector<lexer::token> tokens, std::size_t start);
 };
 }  // namespace parser
 }  // namespace oops_compiler

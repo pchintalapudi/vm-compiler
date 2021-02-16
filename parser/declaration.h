@@ -13,6 +13,7 @@ class declaration : public statement {
     public:
     const std::string &variable_name();
     const expression& get_expression();
+    static std::pair<declaration, std::size_t> parse(std::vector<lexer::token> tokens, std::size_t start);
 };
 }  // namespace parser
 }  // namespace oops_compiler

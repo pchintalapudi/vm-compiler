@@ -9,8 +9,11 @@ namespace oops_compiler {
 namespace parser {
 class basic_block : public statement {
     private:
+    std::vector<statement> substatements;
     public:
-    const std::vector<statement> get_substatements() const;
+    basic_block(std::vector<statement> substatements) : substatements(substatements) {}
+    const std::vector<statement> &get_substatements() const;
+    static std::pair<basic_block, std::size_t> parse(std::vector<lexer::token> tokens, std::size_t start);
 };
 }  // namespace parser
 }  // namespace oops_compiler

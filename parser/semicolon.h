@@ -10,6 +10,7 @@ class semicolon_statement : public statement {
     private:
     public:
     const expression& get_expression();
+    static std::pair<semicolon_statement, std::size_t> parse(std::vector<lexer::token> tokens, std::size_t start);
 };
 }  // namespace parser
 }  // namespace oops_compiler
