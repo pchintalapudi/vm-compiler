@@ -1,8 +1,13 @@
 #include "basic_block.h"
+#include "declaration.h"
 #include "expression.h"
 #include "if.h"
+#include "loop_control.h"
+#include "return.h"
 #include "semicolon.h"
 #include "statement.h"
+#include "switch.h"
+#include "throw.h"
 #include "while.h"
 
 using namespace oops_compiler::parser;
@@ -50,6 +55,7 @@ else_statement::parse(const std::vector<lexer::token> &tokens,
 std::pair<oops_compiler::parser::basic_block, std::size_t> basic_block::parse(
     const std::vector<lexer::token> &tokens, std::size_t start,
     symbol_table &symbols) {
+  symbols.push_frame();
   std::vector<statement> statements;
   start += 1;
   while (tokens[start].token_data.token_type !=
@@ -60,6 +66,7 @@ std::pair<oops_compiler::parser::basic_block, std::size_t> basic_block::parse(
     start = statement.second;
     statements.push_back(statement.first);
   }
+  symbols.pop_frame();
   return {basic_block(statements), start + 1};
 }
 
@@ -75,6 +82,16 @@ std::pair<statement, std::size_t> statement::parse(
           return else_statement::parse(tokens, start, symbols);
         case lexer::keywords::WHILE:
           return while_statement::parse(tokens, start, symbols);
+        case lexer::keywords::RETURN:
+          return return_statement::parse(tokens, start, symbols);
+        case lexer::keywords::THROW:
+          return throw_statement::parse(tokens, start, symbols);
+        case lexer::keywords::SWITCH:
+          return switch_statement::parse(tokens, start, symbols);
+        case lexer::keywords::BREAK:
+          return break_statement::parse(tokens, start, symbols);
+        case lexer::keywords::CONTINUE:
+          return continue_statement::parse(tokens, start, symbols);
       }
       break;
     case lexer::token::data::type::OPERATOR_TOKEN:
@@ -83,6 +100,37 @@ std::pair<statement, std::size_t> statement::parse(
           return basic_block::parse(tokens, start, symbols);
       }
       break;
+    case lexer::token::data::type::DEFERRED_TOKEN: {
+      auto name = std::string(tokens[start].token_data.as_deferred.start,
+                              tokens[start].token_data.as_deferred.size);
+      auto symbol_type = symbols.lookup_symbol(name);
+      switch (*symbol_type) {
+        case symbol_table::type::TYPE:
+          return declaration::parse(tokens, start, symbols);
+      }
+      break;
+    }
   }
   return semicolon_statement::parse(tokens, start, symbols);
+}
+
+std::pair<semicolon_statement, std::size_t> semicolon_statement::parse(
+    const std::vector<lexer::token> &tokens, std::size_t start,
+    symbol_table &symbols) {
+  auto expression = expression::parse(tokens, start, symbols);
+  return {semicolon_statement(expression.first), expression.second + 1};
+}
+
+std::pair<return_statement, std::size_t> return_statement::parse(
+    const std::vector<lexer::token> &tokens, std::size_t start,
+    symbol_table &symbols) {
+  auto semi = semicolon_statement::parse(tokens, start + 1, symbols);
+  return {return_statement(semi.first), semi.second};
+}
+
+std::pair<throw_statement, std::size_t> throw_statement::parse(
+    const std::vector<lexer::token> &tokens, std::size_t start,
+    symbol_table &symbols) {
+  auto semi = semicolon_statement::parse(tokens, start + 1, symbols);
+  return {throw_statement(semi.first), semi.second};
 }

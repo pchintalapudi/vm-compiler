@@ -8,8 +8,10 @@ namespace oops_compiler {
 namespace parser {
 class return_statement : public statement {
     private:
+    semicolon_statement statement;
     public:
-    const expression& get_expression();
+    return_statement(semicolon_statement statement) : statement(statement) {}
+    const semicolon_statement& get_statement();
     static std::pair<return_statement, std::size_t> parse(const std::vector<lexer::token> &tokens, std::size_t start, symbol_table &symbols);
 };
 }  // namespace parser
