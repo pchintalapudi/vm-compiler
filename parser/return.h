@@ -10,7 +10,7 @@ class return_statement : public statement {
     private:
     public:
     const expression& get_expression();
-    static std::pair<return_statement, std::size_t> parse(std::vector<lexer::token> tokens, std::size_t start);
+    static std::pair<return_statement, std::size_t> parse(const std::vector<lexer::token> &tokens, std::size_t start, symbol_table &symbols);
 };
 }  // namespace parser
 }  // namespace oops_compiler

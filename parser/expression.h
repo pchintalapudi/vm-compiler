@@ -4,16 +4,23 @@
 #include <vector>
 
 #include "../lexer/token.h"
+#include "symbol_table.h"
 
 namespace oops_compiler {
 namespace parser {
 class expression {
  private:
  public:
- virtual ~expression();
- static std::pair<expression, std::size_t> parse(std::vector<lexer::token> tokens, std::size_t start);
- static std::pair<expression, std::size_t> parse_parenthetical(std::vector<lexer::token> tokens, std::size_t start);
- static std::pair<expression, std::size_t> parse_indexer(std::vector<lexer::token> tokens, std::size_t start);
+  virtual ~expression();
+  static std::pair<expression, std::size_t> parse(
+      const std::vector<lexer::token> &tokens, std::size_t start,
+      symbol_table &symbols);
+  static std::pair<expression, std::size_t> parse_parenthetical(
+      const std::vector<lexer::token> &tokens, std::size_t start,
+      symbol_table &symbols);
+  static std::pair<expression, std::size_t> parse_indexer(
+      const std::vector<lexer::token> &tokens, std::size_t start,
+      symbol_table &symbols);
 };
 }  // namespace parser
 }  // namespace oops_compiler

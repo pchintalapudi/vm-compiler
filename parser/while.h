@@ -14,7 +14,7 @@ class while_statement : public statement {
     while_statement(expression conditional, statement block) : conditional(conditional), block(block) {}
     const expression& get_conditional();
     const statement& get_statement();
-    static std::pair<while_statement, std::size_t> parse(std::vector<lexer::token> tokens, std::size_t start);
+    static std::pair<while_statement, std::size_t> parse(const std::vector<lexer::token> &tokens, std::size_t start, symbol_table &symbols);
 };
 }  // namespace parser
 }  // namespace oops_compiler

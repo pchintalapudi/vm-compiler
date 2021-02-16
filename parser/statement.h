@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "../lexer/token.h"
+#include "symbol_table.h"
 
 namespace oops_compiler {
     namespace parser {
@@ -11,7 +12,7 @@ namespace oops_compiler {
             private:
             public:
             virtual ~statement();
-            static std::pair<statement, std::size_t> parse(std::vector<lexer::token> tokens, std::size_t start);
+            static std::pair<statement, std::size_t> parse(const std::vector<lexer::token> &tokens, std::size_t start, symbol_table &symbols);
         };
     }
 }
