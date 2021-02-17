@@ -3,6 +3,7 @@
 
 #include "expression.h"
 #include "statement.h"
+#include "semicolon.h"
 
 namespace oops_compiler {
 namespace parser {

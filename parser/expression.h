@@ -11,7 +11,7 @@ namespace parser {
 class expression {
  private:
  public:
-  virtual ~expression();
+  virtual ~expression() = default;
   static std::pair<expression, std::size_t> parse(
       const std::vector<lexer::token> &tokens, std::size_t start,
       symbol_table &symbols);

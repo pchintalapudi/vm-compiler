@@ -11,7 +11,7 @@ namespace oops_compiler {
         class statement {
             private:
             public:
-            virtual ~statement();
+            virtual ~statement() = default;
             static std::pair<statement, std::size_t> parse(const std::vector<lexer::token> &tokens, std::size_t start, symbol_table &symbols);
         };
     }

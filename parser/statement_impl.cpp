@@ -1,14 +1,14 @@
 #include "basic_block.h"
 #include "declaration.h"
 #include "expression.h"
-#include "if.h"
+#include "ifelse.h"
 #include "loop_control.h"
-#include "return.h"
+#include "returns.h"
 #include "semicolon.h"
 #include "statement.h"
 #include "switch.h"
 #include "throw.h"
-#include "while.h"
+#include "whiles.h"
 
 using namespace oops_compiler::parser;
 
@@ -104,10 +104,8 @@ std::pair<statement, std::size_t> statement::parse(
       auto name = std::string(tokens[start].token_data.as_deferred.start,
                               tokens[start].token_data.as_deferred.size);
       auto symbol_type = symbols.lookup_symbol(name);
-      switch (*symbol_type) {
-        case symbol_table::type::TYPE:
-          return declaration::parse(tokens, start, symbols);
-      }
+      if (std::holds_alternative<type_declaration>(*symbol_type))
+        return declaration::parse(tokens, start, symbols);
       break;
     }
   }
