@@ -7,12 +7,15 @@
 #include <vector>
 
 #include "type.h"
+#include "class.h"
 
 namespace oops_compiler {
 namespace parser {
 class symbol_table {
  public:
-  typedef std::variant<std::string, type_declaration> type;
+ enum class type {
+     VARIABLE, NOT_VARIABLE
+ };
 
  private:
   std::vector<std::unordered_map<std::string, type>> frames;

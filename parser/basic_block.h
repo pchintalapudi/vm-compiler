@@ -15,7 +15,6 @@ class basic_block : public statement {
   basic_block(std::vector<statement> substatements)
       : substatements(substatements) {}
   const std::vector<statement> &get_substatements() const;
-  static std::pair<basic_block, std::size_t> parse(const std::vector<lexer::token> &tokens, std::size_t start, symbol_table &symbols);
 };
 }  // namespace parser
 }  // namespace oops_compiler

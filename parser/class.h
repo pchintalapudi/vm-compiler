@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "method.h"
-#include "statement.h"
 #include "type.h"
 #include "variable.h"
 
@@ -12,7 +11,6 @@ namespace oops_compiler {
 namespace parser {
 class class_definition : public type_declaration {
  private:
- std::optional<class_definition> opt;
  public:
   const std::vector<class_definition> &inner_classes();
   const class_definition *superclass();
@@ -20,7 +18,7 @@ class class_definition : public type_declaration {
   const std::vector<variable> &variables();
   const std::vector<method_declaration> &methods();
   const std::vector<class_definition> &imports();
-  const std::string &package();
+  const std::vector<std::string> &package();
 };
 }  // namespace parser
 }  // namespace oops_compiler

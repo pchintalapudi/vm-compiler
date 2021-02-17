@@ -13,17 +13,11 @@ class case_statement : public statement {
  public:
   case_statement(statement substatement) : substatement(substatement) {}
   const statement &get_substatement() const;
-  static std::pair<case_statement, std::size_t> parse(
-      const std::vector<lexer::token> &tokens, std::size_t start,
-      symbol_table &symbols);
 };
 class default_statement : public case_statement {
  public:
   default_statement(statement substatement) : case_statement(substatement) {}
   const statement &get_substatement() const;
-  static std::pair<default_statement, std::size_t> parse(
-      const std::vector<lexer::token> &tokens, std::size_t start,
-      symbol_table &symbols);
 };
 class switch_statement : public statement {
  private:
@@ -32,9 +26,6 @@ class switch_statement : public statement {
  public:
   switch_statement(std::vector<case_statement> cases) : cases(cases) {}
   const std::vector<case_statement> &get_cases() const;
-  static std::pair<switch_statement, std::size_t> parse(
-      const std::vector<lexer::token> &tokens, std::size_t start,
-      symbol_table &symbols);
 };
 }  // namespace parser
 }  // namespace oops_compiler

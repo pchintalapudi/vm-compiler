@@ -14,7 +14,6 @@ class if_statement : public statement {
     if_statement(expression conditional, statement block) : conditional(conditional), block(block) {}
     const expression& get_conditional();
     const statement& get_statement();
-    static std::pair<if_statement, std::size_t> parse(const std::vector<lexer::token> &tokens, std::size_t start, symbol_table &symbols);
 };
 class else_statement : public statement {
     private:
@@ -23,7 +22,6 @@ class else_statement : public statement {
     else_statement(statement block) : block(block) {}
     const expression& get_conditional();
     const statement& get_statement();
-    static std::pair<else_statement, std::size_t> parse(const std::vector<lexer::token> &tokens, std::size_t start, symbol_table &symbols);
 };
 }  // namespace parser
 }  // namespace oops_compiler

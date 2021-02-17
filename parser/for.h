@@ -13,7 +13,6 @@ class for_statement : public statement {
     const expression& get_conditional();
     const expression& get_increment();
     const statement& get_body();
-    static std::pair<for_statement, std::size_t> parse(const std::vector<lexer::token> &tokens, std::size_t start, symbol_table &symbols);
 };
 }  // namespace parser
 }  // namespace oops_compiler

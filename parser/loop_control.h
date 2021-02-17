@@ -10,17 +10,11 @@ class break_statement : public statement {
  private:
  public:
   break_statement() {}
-  static std::pair<break_statement, std::size_t> parse(
-      const std::vector<lexer::token> &tokens, std::size_t start,
-      symbol_table &symbols);
 };
 class continue_statement : public statement {
  private:
  public:
   continue_statement() {}
-  static std::pair<continue_statement, std::size_t> parse(
-      const std::vector<lexer::token> &tokens, std::size_t start,
-      symbol_table &symbols);
 };
 }  // namespace parser
 }  // namespace oops_compiler

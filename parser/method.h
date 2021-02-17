@@ -5,11 +5,11 @@
 
 #include "basic_block.h"
 #include "modifiers.h"
-#include "statement.h"
 #include "type.h"
 
 namespace oops_compiler {
 namespace parser {
+class class_definition;
 class method_declaration : public type_declaration {
  public:
   enum class type { DEF, GET, SET, OPERATOR };
@@ -22,6 +22,7 @@ class method_declaration : public type_declaration {
   bool is_final() const;
   const type_instantiation &get_return_type() const;
   const std::vector<type_instantiation> &get_parameter_types() const;
+  const class_definition &get_class() const;
 };
 class unparsed_method_declaration : public method_declaration {
  private:
