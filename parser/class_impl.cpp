@@ -262,7 +262,7 @@ complete:
   scope.add_class(std::move(path), alias);
   out.next_token = begin;
   out.value = std::make_unique<imported_class>(
-      alias, *loader.lookup_class(scope.get_class(alias)));
+      alias, *loader.lookup_class(**scope.get_class(alias)));
   return out;
 }
 

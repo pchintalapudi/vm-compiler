@@ -20,12 +20,19 @@ struct output {
   std::vector<logger::message> messages;
   std::vector<logger::context> contexts;
   std::size_t next_token;
+  template <typename in_t>
+  static output<out_t> generalize(output<in_t> out) {
+    return output<out_t>{.filename = out.filename,
+                         .value = std::move(out.value),
+                         .messages = std::move(out.messages),
+                         .contexts = std::move(out.contexts),
+                         .next_token = out.next_token};
+  }
 };
 template <typename node>
 output<node> parse(const char *filename,
                    const std::vector<lexer::token> &tokens, std::size_t begin,
                    classloader &loader, scope &scope);
-
 
 typedef std::vector<std::string> package_declaration;
 class source_file {
