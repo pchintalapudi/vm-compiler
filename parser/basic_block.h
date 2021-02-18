@@ -10,7 +10,7 @@
 
 namespace oops_compiler {
 namespace parser {
-class basic_block : public statement, public parseable<basic_block> {
+class basic_block : public statement {
  private:
   scope locals;
   std::vector<std::unique_ptr<statement>> substatements;

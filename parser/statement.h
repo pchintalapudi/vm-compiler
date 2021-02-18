@@ -8,7 +8,7 @@
 
 namespace oops_compiler {
     namespace parser {
-        class statement : public parseable<statement> {
+        class statement {
             private:
             public:
             virtual ~statement() = default;

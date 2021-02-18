@@ -9,7 +9,7 @@
 namespace oops_compiler {
 namespace parser {
 
-class variable : public parseable<variable> {
+class variable {
  private:
   modifiers mods;
   storage store;

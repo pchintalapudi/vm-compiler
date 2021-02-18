@@ -6,12 +6,12 @@
 
 namespace oops_compiler {
 namespace parser {
-class break_statement : public statement, public parseable<break_statement> {
+class break_statement : public statement {
  private:
  public:
   break_statement() {}
 };
-class continue_statement : public statement, public parseable<continue_statement> {
+class continue_statement : public statement {
  private:
  public:
   continue_statement() {}

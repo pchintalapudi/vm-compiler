@@ -15,8 +15,7 @@ namespace oops_compiler {
 namespace parser {
 
 class classloader;
-class class_definition : public type_declaration,
-                         public parseable<class_definition> {
+class class_definition : public type_declaration {
  private:
   std::vector<const class_definition *> sub_classes, interfaces, imported;
   const class_definition *super;

@@ -6,7 +6,7 @@
 
 namespace oops_compiler {
 namespace parser {
-class if_statement : public statement, public parseable<if_statement> {
+class if_statement : public statement {
  private:
   std::unique_ptr<expression> conditional;
   std::unique_ptr<statement> block;
@@ -18,7 +18,7 @@ class if_statement : public statement, public parseable<if_statement> {
   const expression &get_conditional() { return *conditional; }
   const statement &get_statement() { return *block; }
 };
-class else_statement : public statement, public parseable<else_statement> {
+class else_statement : public statement {
  private:
   std::unique_ptr<statement> block;
 

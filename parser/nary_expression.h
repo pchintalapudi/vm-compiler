@@ -50,7 +50,7 @@ class binary_expression : public expression,
   const expression &get_second_expression() const { return *second; }
   type get_type() const { return t; }
 };
-class unary_expression : public expression, public parseable<unary_expression> {
+class unary_expression : public expression {
  public:
   enum class type {
     PREINC,

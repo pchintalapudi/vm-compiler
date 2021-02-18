@@ -6,7 +6,7 @@
 
 namespace oops_compiler {
 namespace parser {
-class for_statement : public statement, public parseable<for_statement> {
+class for_statement : public statement {
  private:
   std::unique_ptr<statement> declaration, body;
   std::unique_ptr<expression> conditional, increment;

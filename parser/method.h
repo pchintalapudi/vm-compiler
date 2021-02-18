@@ -10,8 +10,7 @@
 namespace oops_compiler {
 namespace parser {
 class class_definition;
-class method_declaration : public type_declaration,
-                           public parseable<method_declaration> {
+class method_declaration : public type_declaration {
  public:
   enum class type { DEF, GET, SET, OPERATOR };
   modifiers mods;

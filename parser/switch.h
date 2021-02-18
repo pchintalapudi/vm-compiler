@@ -6,7 +6,7 @@
 
 namespace oops_compiler {
 namespace parser {
-class case_statement : public statement, public parseable<case_statement> {
+class case_statement : public statement {
  private:
   std::unique_ptr<statement> substatement;
   lexer::token literal;
@@ -17,7 +17,7 @@ class case_statement : public statement, public parseable<case_statement> {
   const statement &get_substatement() const { return *substatement; }
   const lexer::token &get_literal() const { return literal; }
 };
-class default_statement : public parseable<default_statement> {
+class default_statement {
  private:
   std::unique_ptr<statement> substatement;
 
@@ -26,7 +26,7 @@ class default_statement : public parseable<default_statement> {
       : substatement(std::move(substatement)) {}
   const statement &get_substatement() const { return *substatement; }
 };
-class switch_statement : public statement, public parseable<switch_statement> {
+class switch_statement : public statement {
  private:
   std::vector<case_statement> cases;
   std::unique_ptr<default_statement> defaulted;

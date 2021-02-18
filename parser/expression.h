@@ -10,10 +10,32 @@
 
 namespace oops_compiler {
 namespace parser {
-class expression : public parseable<expression> {
+class expression {
  private:
  public:
   virtual ~expression() = default;
+};
+
+class parenthetical : public expression {
+ private:
+  std::unique_ptr<expression> subexpr;
+
+ public:
+  parenthetical(std::unique_ptr<expression> subexpr)
+      : subexpr(std::move(subexpr)) {}
+
+  const expression &subexpression() const { return *subexpr; }
+};
+
+class indexed : public expression {
+ private:
+  std::unique_ptr<expression> subexpr;
+
+ public:
+  indexed(std::unique_ptr<expression> subexpr)
+      : subexpr(std::move(subexpr)) {}
+
+  const expression &subexpression() const { return *subexpr; }
 };
 }  // namespace parser
 }  // namespace oops_compiler

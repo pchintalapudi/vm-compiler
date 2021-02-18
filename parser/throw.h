@@ -7,7 +7,7 @@
 
 namespace oops_compiler {
 namespace parser {
-class throw_statement : public statement, public parseable<throw_statement> {
+class throw_statement : public statement {
  private:
   semicolon_statement statement;
 

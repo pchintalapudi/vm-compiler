@@ -6,7 +6,7 @@
 
 namespace oops_compiler {
 namespace parser {
-class while_statement : public statement, public parseable<while_statement> {
+class while_statement : public statement {
  private:
   std::unique_ptr<expression> conditional;
   std::unique_ptr<statement> block;
