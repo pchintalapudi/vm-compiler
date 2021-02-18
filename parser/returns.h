@@ -7,11 +7,11 @@
 
 namespace oops_compiler {
 namespace parser {
-class return_statement : public statement {
+class return_statement : public statement, public parseable<return_statement> {
     private:
     semicolon_statement statement;
     public:
-    return_statement(semicolon_statement statement) : statement(statement) {}
+    return_statement(semicolon_statement statement) : statement(std::move(statement)) {}
     const semicolon_statement& get_statement();
 };
 }  // namespace parser

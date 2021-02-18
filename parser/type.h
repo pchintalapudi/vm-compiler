@@ -12,23 +12,47 @@ class generic_declaration {
   enum class bound { SUPER, EXTENDS };
 
  private:
+  std::string name;
+  std::vector<std::pair<bound, const type_instantiation *>> bounds;
+
  public:
-  const std::string &get_name() const;
+  generic_declaration(
+      std::string name,
+      std::vector<std::pair<bound, const type_instantiation *>> bounds)
+      : name(std::move(name)), bounds(std::move(bounds)) {}
+  const std::string &get_name() const { return name; }
   const std::vector<std::pair<bound, const type_instantiation *>> &get_bounds()
-      const;
+      const {
+    return bounds;
+  }
 };
 class type_declaration {
  private:
+  std::string name;
+  std::vector<generic_declaration> generics;
+
  public:
-  const std::string &get_name() const;
-  const std::vector<generic_declaration> &get_generics() const;
-  virtual ~type_declaration();
+  type_declaration(std::string name, std::vector<generic_declaration> generics)
+      : name(std::move(name)), generics(std::move(generics)) {}
+  const std::string &get_name() const { return name; }
+  const std::vector<generic_declaration> &get_generics() const {
+    return generics;
+  }
+  virtual ~type_declaration() = default;
 };
 class type_instantiation : public type_declaration {
  private:
+  std::vector<const type_instantiation *> instantiations;
+
  public:
+  type_instantiation(const type_declaration &declaration,
+                     std::vector<const type_instantiation *> instantiations)
+      : type_declaration(declaration),
+        instantiations(std::move(instantiations)) {}
   const std::vector<const type_instantiation *> &get_generic_instantiations()
-      const;
+      const {
+    return instantiations;
+  }
 };
 }  // namespace parser
 }  // namespace oops_compiler

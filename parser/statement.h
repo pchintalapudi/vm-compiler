@@ -4,11 +4,11 @@
 #include <vector>
 
 #include "../lexer/token.h"
+#include "scope.h"
 
 namespace oops_compiler {
     namespace parser {
-        class symbol_table;
-        class statement {
+        class statement : public parseable<statement> {
             private:
             public:
             virtual ~statement() = default;

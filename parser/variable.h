@@ -9,12 +9,18 @@
 namespace oops_compiler {
 namespace parser {
 
-class variable {
+class variable : public parseable<variable> {
+ private:
+  modifiers mods;
+  storage store;
+  const type_instantiation *type;
+  std::string name;
+
  public:
-  modifiers get_access_modifier() const;
-  storage get_storage() const;
-  const type_instantiation &get_type() const;
-  std::string get_name() const;
+  modifiers get_access_modifier() const { return mods; }
+  storage get_storage() const { return store; }
+  const type_instantiation &get_type() const { return *type; }
+  const std::string &get_name() const { return name; }
 };
 }  // namespace parser
 }  // namespace oops_compiler

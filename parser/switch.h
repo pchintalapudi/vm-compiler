@@ -6,26 +6,35 @@
 
 namespace oops_compiler {
 namespace parser {
-class case_statement : public statement {
+class case_statement : public statement, public parseable<case_statement> {
  private:
-  statement substatement;
+  std::unique_ptr<statement> substatement;
+  lexer::token literal;
 
  public:
-  case_statement(statement substatement) : substatement(substatement) {}
-  const statement &get_substatement() const;
+  case_statement(std::unique_ptr<statement> substatement, lexer::token literal)
+      : substatement(std::move(substatement)), literal(std::move(literal)) {}
+  const statement &get_substatement() const { return *substatement; }
+  const lexer::token &get_literal() const { return literal; }
 };
-class default_statement : public case_statement {
+class default_statement : public parseable<default_statement> {
+ private:
+  std::unique_ptr<statement> substatement;
+
  public:
-  default_statement(statement substatement) : case_statement(substatement) {}
-  const statement &get_substatement() const;
+  default_statement(std::unique_ptr<statement> substatement)
+      : substatement(std::move(substatement)) {}
+  const statement &get_substatement() const { return *substatement; }
 };
-class switch_statement : public statement {
+class switch_statement : public statement, public parseable<switch_statement> {
  private:
   std::vector<case_statement> cases;
+  std::unique_ptr<default_statement> defaulted;
 
  public:
   switch_statement(std::vector<case_statement> cases) : cases(cases) {}
   const std::vector<case_statement> &get_cases() const;
+  const default_statement &get_default() const { return *defaulted; }
 };
 }  // namespace parser
 }  // namespace oops_compiler

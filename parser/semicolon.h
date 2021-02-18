@@ -6,12 +6,14 @@
 
 namespace oops_compiler {
 namespace parser {
-class semicolon_statement : public statement {
+class semicolon_statement : public statement, parseable<semicolon_statement> {
     private:
-    expression expr;
+    std::unique_ptr<expression> expr;
     public:
-    semicolon_statement(expression expr) : expr(expr) {}
-    const expression& get_expression();
+    semicolon_statement(std::unique_ptr<expression> expr) : expr(std::move(expr)) {}
+    const expression& get_expression() {
+        return *expr;
+    }
 };
 }  // namespace parser
 }  // namespace oops_compiler

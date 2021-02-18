@@ -1,5 +1,6 @@
 target_sources(oops-compiler
 PRIVATE
+base_classes.h
 basic_block.h
 class.h
 declaration.h
@@ -12,11 +13,11 @@ method.h
 modifiers.h
 nary_expression.h
 returns.h
+scope.h
 semicolon.h
 statement_impl.cpp
 statement.h
 switch.h
-symbol_table.h
 throw.h
 type.h
 variable.h

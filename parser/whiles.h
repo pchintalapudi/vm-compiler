@@ -6,14 +6,17 @@
 
 namespace oops_compiler {
 namespace parser {
-class while_statement : public statement {
-    private:
-    expression conditional;
-    statement block;
-    public:
-    while_statement(expression conditional, statement block) : conditional(conditional), block(block) {}
-    const expression& get_conditional();
-    const statement& get_statement();
+class while_statement : public statement, public parseable<while_statement> {
+ private:
+  std::unique_ptr<expression> conditional;
+  std::unique_ptr<statement> block;
+
+ public:
+  while_statement(std::unique_ptr<expression> conditional,
+                  std::unique_ptr<statement> block)
+      : conditional(std::move(conditional)), block(std::move(block)) {}
+  const expression &get_conditional() { return *conditional; }
+  const statement &get_statement() { return *block; }
 };
 }  // namespace parser
 }  // namespace oops_compiler

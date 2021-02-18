@@ -6,22 +6,25 @@
 
 namespace oops_compiler {
 namespace parser {
-class if_statement : public statement {
-    private:
-    expression conditional;
-    statement block;
-    public:
-    if_statement(expression conditional, statement block) : conditional(conditional), block(block) {}
-    const expression& get_conditional();
-    const statement& get_statement();
+class if_statement : public statement, public parseable<if_statement> {
+ private:
+  std::unique_ptr<expression> conditional;
+  std::unique_ptr<statement> block;
+
+ public:
+  if_statement(std::unique_ptr<expression> conditional,
+               std::unique_ptr<statement> block)
+      : conditional(std::move(conditional)), block(std::move(block)) {}
+  const expression &get_conditional() { return *conditional; }
+  const statement &get_statement() { return *block; }
 };
-class else_statement : public statement {
-    private:
-    statement block;
-    public:
-    else_statement(statement block) : block(block) {}
-    const expression& get_conditional();
-    const statement& get_statement();
+class else_statement : public statement, public parseable<else_statement> {
+ private:
+  std::unique_ptr<statement> block;
+
+ public:
+  else_statement(std::unique_ptr<statement> block) : block(std::move(block)) {}
+  const statement &get_statement() { return *block; }
 };
 }  // namespace parser
 }  // namespace oops_compiler
