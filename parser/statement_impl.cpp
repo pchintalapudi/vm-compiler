@@ -2,14 +2,16 @@
 
 #include "basic_block.h"
 #include "classloader.h"
+#include "enhanced_for.h"  // TODO
 #include "expression.h"
+#include "for.h"  // TODO
 #include "ifelse.h"
 #include "impl_common.h"
 #include "returns.h"
 #include "scope.h"
 #include "semicolon.h"
-#include "statement.h"
-#include "switch.h"
+#include "statement.h"  // TODO
+#include "switch.h"     // TODO
 #include "throw.h"
 #include "whiles.h"
 
@@ -222,8 +224,7 @@ parse_decl(semicolon_statement) {
   out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
   begin++;
-  auto expr =
-      parse<expression>(filename, tokens, begin, loader, scope);
+  auto expr = parse<expression>(filename, tokens, begin, loader, scope);
   std::copy(expr.messages.begin(), expr.messages.end(),
             std::back_inserter(out.messages));
   out.next_token = expr.next_token;

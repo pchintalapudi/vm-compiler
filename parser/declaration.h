@@ -9,16 +9,19 @@
 
 namespace oops_compiler {
 namespace parser {
-class declaration : public statement, parseable<declaration> {
+class declaration : public statement {
  private:
+  const type_instantiation *type;
   std::string name;
   std::unique_ptr<expression> expr;
 
  public:
-  declaration(std::string name, std::unique_ptr<expression> expr)
-      : name(std::move(name)), expr(std::move(expr)) {}
-  const std::string &variable_name() { return name; }
-  const expression &get_expression() { return *expr; }
+  declaration(const type_instantiation &type, std::string name,
+              std::unique_ptr<expression> expr)
+      : type(&type), name(std::move(name)), expr(std::move(expr)) {}
+  const type_instantiation &get_type() const;
+  const std::string &variable_name() const { return name; }
+  const expression &get_expression() const { return *expr; }
 };
 }  // namespace parser
 }  // namespace oops_compiler

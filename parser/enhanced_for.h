@@ -7,8 +7,7 @@
 
 namespace oops_compiler {
 namespace parser {
-class enhanced_for_statement : public statement,
-                               public parseable<enhanced_for_statement> {
+class enhanced_for_statement : public statement {
  private:
   std::unique_ptr<statement> declaration;
   std::unique_ptr<expression> iterable;

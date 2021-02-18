@@ -17,9 +17,9 @@ class for_statement : public statement {
                 std::unique_ptr<expression> increment,
                 std::unique_ptr<statement> body)
       : declaration(std::move(declaration)),
+        body(std::move(body)),
         conditional(std::move(conditional)),
-        increment(std::move(increment)),
-        body(std::move(body)) {}
+        increment(std::move(increment)) {}
   const statement &get_declaration() { return *declaration; }
   const expression &get_conditional() { return *conditional; }
   const expression &get_increment() { return *increment; }

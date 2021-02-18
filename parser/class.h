@@ -5,6 +5,7 @@
 #include <optional>
 #include <vector>
 
+#include "../logger/logging.h"
 #include "base_classes.h"
 #include "method.h"
 #include "scope.h"
@@ -17,26 +18,26 @@ namespace parser {
 class classloader;
 class class_definition : public type_declaration {
  private:
-  std::vector<const class_definition *> sub_classes, interfaces, imported;
+  const source_file *source;
+  std::vector<const class_definition *> sub_classes, interfaces;
   const class_definition *super;
-  std::vector<std::string> pack;
   std::vector<std::unique_ptr<variable>> vars;
   std::vector<std::unique_ptr<method_declaration>> mtds;
+  scope class_scope;
 
  public:
-  class_definition(std::string name, std::vector<generic_declaration> generics,
+  class_definition(const source_file &source, std::string name,
+                   std::vector<generic_declaration> generics,
                    std::vector<const class_definition *> sub_classes,
                    std::vector<const class_definition *> interfaces,
-                   std::vector<const class_definition *> imported,
-                   const class_definition &super, std::vector<std::string> pack,
+                   const class_definition &super,
                    std::vector<std::unique_ptr<variable>> vars,
                    std::vector<std::unique_ptr<method_declaration>> mtds)
       : type_declaration(std::move(name), std::move(generics)),
+        source(&source),
         sub_classes(std::move(sub_classes)),
         interfaces(std::move(interfaces)),
-        imported(std::move(imported)),
         super(&super),
-        pack(std::move(pack)),
         vars(std::move(vars)),
         mtds(std::move(mtds)) {}
   const std::vector<const class_definition *> &inner_classes() const {
@@ -54,11 +55,8 @@ class class_definition : public type_declaration {
   const std::vector<std::unique_ptr<method_declaration>> &methods() const {
     return mtds;
   }
-  const std::vector<const class_definition *> &imports() const {
-    return imported;
-  }
-  const std::vector<std::string> &package() const { return pack; }
-  void resolve_definitions(classloader &loader);
+  const source_file &get_source() const { return *source; }
+  std::vector<logger::message> resolve_definitions(classloader &loader);
 };
 }  // namespace parser
 }  // namespace oops_compiler

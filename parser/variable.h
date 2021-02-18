@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include "declaration.h"
 #include "modifiers.h"
 #include "type.h"
 
@@ -13,14 +14,16 @@ class variable {
  private:
   modifiers mods;
   storage store;
-  const type_instantiation *type;
-  std::string name;
+  bool fin;
+  declaration dec;
 
  public:
+  variable(modifiers mods, storage store, bool fin, declaration dec)
+      : mods(mods), store(store), fin(fin), dec(std::move(dec)) {}
   modifiers get_access_modifier() const { return mods; }
   storage get_storage() const { return store; }
-  const type_instantiation &get_type() const { return *type; }
-  const std::string &get_name() const { return name; }
+  bool is_final() const { return fin; }
+  const declaration &get_declaration() const { return dec; }
 };
 }  // namespace parser
 }  // namespace oops_compiler

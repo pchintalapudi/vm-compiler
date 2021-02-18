@@ -64,6 +64,7 @@ enum class operators {
   __COUNT__
 };
 enum class keywords {
+  AS,
   AUTO,
   BOOLEAN,
   BREAK,

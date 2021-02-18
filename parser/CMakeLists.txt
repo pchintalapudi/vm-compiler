@@ -3,6 +3,7 @@ PRIVATE
 base_classes.h
 basic_block.h
 class.h
+class_impl.cpp
 declaration.h
 enhanced_for.h
 expression.h

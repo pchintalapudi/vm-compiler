@@ -12,6 +12,7 @@ namespace oops_compiler {
 namespace parser {
 class classloader;
 class scope;
+class type_declaration;
 template <typename out_t>
 struct output {
   const char *filename;
@@ -24,6 +25,43 @@ template <typename node>
 output<node> parse(const char *filename,
                    const std::vector<lexer::token> &tokens, std::size_t begin,
                    classloader &loader, scope &scope);
+
+
+typedef std::vector<std::string> package_declaration;
+class source_file {
+ private:
+  const char *filename;
+  std::unordered_map<std::string, const type_declaration *> imports;
+  package_declaration package;
+
+ public:
+  source_file(const char *filename,
+              std::unordered_map<std::string, const type_declaration *> imports,
+              package_declaration package)
+      : filename(filename),
+        imports(std::move(imports)),
+        package(std::move(package)) {}
+  const char *get_filename() const { return filename; }
+  const std::unordered_map<std::string, const type_declaration *> &get_imports()
+      const {
+    return imports;
+  }
+
+  const package_declaration &get_package() const { return package; }
+};
+
+class imported_class {
+ private:
+  std::string alias;
+  const type_declaration *cls;
+
+ public:
+  imported_class(std::string alias, const type_declaration &cls)
+      : alias(std::move(alias)), cls(&cls) {}
+
+  const std::string &get_alias() const { return alias; }
+  const type_declaration &get_class() const { return *cls; }
+};
 }  // namespace parser
 }  // namespace oops_compiler
 
