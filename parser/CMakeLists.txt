@@ -6,8 +6,10 @@ class.h
 declaration.h
 enhanced_for.h
 expression.h
+expression_impl.cpp
 for.h
 ifelse.h
+impl_common.h
 loop_control.h
 method.h
 modifiers.h

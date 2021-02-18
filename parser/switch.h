@@ -32,7 +32,7 @@ class switch_statement : public statement {
   std::unique_ptr<default_statement> defaulted;
 
  public:
-  switch_statement(std::vector<case_statement> cases) : cases(cases) {}
+  switch_statement(std::vector<case_statement> cases) : cases(std::move(cases)) {}
   const std::vector<case_statement> &get_cases() const;
   const default_statement &get_default() const { return *defaulted; }
 };

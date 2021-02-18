@@ -6,15 +6,15 @@
 
 namespace oops_compiler {
 namespace parser {
-class break_statement : public statement {
+class break_expression : public expression {
  private:
  public:
-  break_statement() {}
+  break_expression() {}
 };
-class continue_statement : public statement {
+class continue_expression : public expression {
  private:
  public:
-  continue_statement() {}
+  continue_expression() {}
 };
 }  // namespace parser
 }  // namespace oops_compiler

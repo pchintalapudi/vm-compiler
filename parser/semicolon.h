@@ -6,7 +6,7 @@
 
 namespace oops_compiler {
 namespace parser {
-class semicolon_statement : public statement, parseable<semicolon_statement> {
+class semicolon_statement : public statement {
     private:
     std::unique_ptr<expression> expr;
     public:

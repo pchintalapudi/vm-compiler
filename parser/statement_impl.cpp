@@ -4,44 +4,29 @@
 #include "classloader.h"
 #include "expression.h"
 #include "ifelse.h"
+#include "impl_common.h"
+#include "returns.h"
 #include "scope.h"
+#include "semicolon.h"
 #include "statement.h"
+#include "switch.h"
+#include "throw.h"
 #include "whiles.h"
 
 using namespace oops_compiler::parser;
 
-#define parse_decl(type)                                      \
-  template <>                                                 \
-  output<type> oops_compiler::parser::parse<type>(            \
-      const char *filename,                                   \
-      const std::vector<oops_compiler::lexer::token> &tokens, \
-      std::size_t begin, classloader &loader, scope &scope)
-
-namespace {
-
-struct message_builder {
-  std::stringstream builder;
-  oops_compiler::logger::message build_message(
-      oops_compiler::logger::level level,
-      oops_compiler::logger::context context) {
-    auto message = (oops_compiler::logger::message{
-        .text = builder.str(),
-        .location = context,
-        .produced_at = oops_compiler::logger::stage::PARSING,
-        .log_level = level});
-    builder.clear();
-    return message;
-  }
-};
-}  // namespace
-parse_decl(expression);
 parse_decl(statement);
-parse_decl(parenthetical);
-parse_decl(indexed);
 parse_decl(basic_block);
+parse_decl(while_statement);
+parse_decl(if_statement);
+parse_decl(else_statement);
+parse_decl(return_statement);
+parse_decl(throw_statement);
+parse_decl(semicolon_statement);
 
 parse_decl(while_statement) {
   output<while_statement> out;
+  out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
   if (tokens.size() == ++begin) {
     message_builder builder;
@@ -83,6 +68,7 @@ parse_decl(while_statement) {
 }
 parse_decl(if_statement) {
   output<if_statement> out;
+  out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
   if (tokens.size() == ++begin) {
     message_builder builder;
@@ -124,6 +110,7 @@ parse_decl(if_statement) {
 }
 parse_decl(else_statement) {
   output<else_statement> out;
+  out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
   if (tokens.size() == ++begin) {
     message_builder builder;
@@ -143,61 +130,106 @@ parse_decl(else_statement) {
   begin = out.next_token;
   out.value = std::make_unique<else_statement>(std::move(*stmnt.value));
 }
-parse_decl(parenthetical) {
-  output<parenthetical> out;
+
+parse_decl(basic_block) {
+  output<basic_block> out;
+  out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
-  auto expr = parse<expression>(filename, tokens, begin + 1, loader, scope);
-  std::copy(expr.messages.begin(), expr.messages.end(),
-            std::back_inserter(out.messages));
-  out.next_token = expr.next_token;
-  if (!expr.value) {
-    return out;
-  }
-  if (out.next_token == tokens.size()) {
+  begin++;
+  if (tokens.size() == begin) {
     message_builder builder;
-    builder.builder << "Missing closing parenthesis in expession!";
+    builder.builder << "Missing closing brace in statement!";
     out.messages.push_back(builder.build_message(
         logger::level::FATAL_ERROR, tokens[out.next_token - 1].token_context));
     return out;
   }
-  if (tokens[out.next_token].token_data.token_type !=
-          lexer::token::data::type::OPERATOR_TOKEN ||
-      tokens[out.next_token].token_data.as_operator !=
-          lexer::operators::ROUND_CLOSE) {
-    message_builder builder;
-    builder.builder << "Missing closing parenthesis in expression!";
-    out.messages.push_back(builder.build_message(
-        logger::level::ERROR, tokens[out.next_token].token_context));
+  auto subscope = scope.extend();
+  if (tokens[begin].token_data.token_type ==
+          lexer::token::data::type::OPERATOR_TOKEN &&
+      tokens[begin].token_data.as_operator == lexer::operators::CURLY_CLOSE) {
+    out.contexts.push_back(tokens[begin].token_context);
+    out.next_token = begin + 1;
+    out.value = std::make_unique<basic_block>(
+        subscope, std::vector<std::unique_ptr<statement>>{});
+    return out;
   }
-  out.value = std::make_unique<parenthetical>(std::move(*expr.value));
+  std::vector<std::unique_ptr<statement>> statements;
+  do {
+    auto stmnt = parse<statement>(filename, tokens, begin, loader, subscope);
+    std::copy(stmnt.messages.begin(), stmnt.messages.end(),
+              std::back_inserter(out.messages));
+    out.next_token = stmnt.next_token;
+    if (!stmnt.value) {
+      return out;
+    }
+    statements.push_back(std::move(*stmnt.value));
+    begin = out.next_token;
+  } while (
+      begin < tokens.size() &&
+      (tokens[begin].token_data.token_type !=
+           lexer::token::data::type::OPERATOR_TOKEN ||
+       tokens[begin].token_data.as_operator != lexer::operators::CURLY_CLOSE));
+  if (tokens.size() == begin) {
+    message_builder builder;
+    builder.builder << "Missing closing brace in statement!";
+    out.messages.push_back(builder.build_message(
+        logger::level::ERROR, tokens[out.next_token - 1].token_context));
+  } else {
+    out.contexts.push_back(tokens[begin].token_context);
+    out.next_token = begin + 1;
+  }
+  out.value =
+      std::make_unique<basic_block>(std::move(subscope), std::move(statements));
   return out;
 }
-parse_decl(indexed) {
-  output<indexed> out;
+
+parse_decl(return_statement) {
+  output<return_statement> out;
+  out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
-  auto expr = parse<expression>(filename, tokens, begin + 1, loader, scope);
+  begin++;
+  auto stmnt =
+      parse<semicolon_statement>(filename, tokens, begin, loader, scope);
+  std::copy(stmnt.messages.begin(), stmnt.messages.end(),
+            std::back_inserter(out.messages));
+  out.next_token = stmnt.next_token;
+  if (!stmnt.value) {
+    return out;
+  }
+  out.value = std::make_unique<return_statement>(std::move(**stmnt.value));
+  return out;
+}
+
+parse_decl(throw_statement) {
+  output<throw_statement> out;
+  out.filename = filename;
+  out.contexts.push_back(tokens[begin].token_context);
+  begin++;
+  auto stmnt =
+      parse<semicolon_statement>(filename, tokens, begin, loader, scope);
+  std::copy(stmnt.messages.begin(), stmnt.messages.end(),
+            std::back_inserter(out.messages));
+  out.next_token = stmnt.next_token;
+  if (!stmnt.value) {
+    return out;
+  }
+  out.value = std::make_unique<throw_statement>(std::move(**stmnt.value));
+  return out;
+}
+
+parse_decl(semicolon_statement) {
+  output<semicolon_statement> out;
+  out.filename = filename;
+  out.contexts.push_back(tokens[begin].token_context);
+  begin++;
+  auto expr =
+      parse<expression>(filename, tokens, begin, loader, scope);
   std::copy(expr.messages.begin(), expr.messages.end(),
             std::back_inserter(out.messages));
   out.next_token = expr.next_token;
   if (!expr.value) {
     return out;
   }
-  if (out.next_token == tokens.size()) {
-    message_builder builder;
-    builder.builder << "Missing closing bracket in expession!";
-    out.messages.push_back(builder.build_message(
-        logger::level::FATAL_ERROR, tokens[out.next_token - 1].token_context));
-    return out;
-  }
-  if (tokens[out.next_token].token_data.token_type !=
-          lexer::token::data::type::OPERATOR_TOKEN ||
-      tokens[out.next_token].token_data.as_operator !=
-          lexer::operators::SQUARE_CLOSE) {
-    message_builder builder;
-    builder.builder << "Missing closing bracket in expression!";
-    out.messages.push_back(builder.build_message(
-        logger::level::ERROR, tokens[out.next_token].token_context));
-  }
-  out.value = std::make_unique<indexed>(std::move(*expr.value));
+  out.value = std::make_unique<semicolon_statement>(std::move(*expr.value));
   return out;
 }
