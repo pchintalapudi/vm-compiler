@@ -34,6 +34,11 @@ struct message_builder {
   }
 };
 }  // namespace
+parse_decl(expression);
+parse_decl(statement);
+parse_decl(parenthetical);
+parse_decl(indexed);
+parse_decl(basic_block);
 
 parse_decl(while_statement) {
   output<while_statement> out;
@@ -164,7 +169,7 @@ parse_decl(parenthetical) {
     out.messages.push_back(builder.build_message(
         logger::level::ERROR, tokens[out.next_token].token_context));
   }
-  out.value = std::make_unique<parenthetical>(*expr.value);
+  out.value = std::make_unique<parenthetical>(std::move(*expr.value));
   return out;
 }
 parse_decl(indexed) {
@@ -193,6 +198,6 @@ parse_decl(indexed) {
     out.messages.push_back(builder.build_message(
         logger::level::ERROR, tokens[out.next_token].token_context));
   }
-  out.value = std::make_unique<indexed>(*expr.value);
+  out.value = std::make_unique<indexed>(std::move(*expr.value));
   return out;
 }
