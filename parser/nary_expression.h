@@ -5,8 +5,7 @@
 
 namespace oops_compiler {
 namespace parser {
-class binary_expression : public expression,
-                          public parseable<binary_expression> {
+class binary_expression : public expression {
  public:
   enum class type {
     ADD,
@@ -46,6 +45,9 @@ class binary_expression : public expression,
   std::unique_ptr<expression> first, second;
 
  public:
+  binary_expression(std::unique_ptr<expression> first, type t,
+                    std::unique_ptr<expression> second)
+      : t(t), first(std::move(first)), second(std::move(second)) {}
   const expression &get_first_expression() const { return *first; }
   const expression &get_second_expression() const { return *second; }
   type get_type() const { return t; }
@@ -69,6 +71,8 @@ class unary_expression : public expression {
   std::unique_ptr<expression> expr;
 
  public:
+  unary_expression(type t, std::unique_ptr<expression> expr)
+      : t(t), expr(std::move(expr)) {}
   const expression &get_expression() const { return *expr; }
   type get_type() const { return t; }
 };

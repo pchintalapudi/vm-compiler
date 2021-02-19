@@ -32,10 +32,18 @@ class indexed : public expression {
   std::unique_ptr<expression> subexpr;
 
  public:
-  indexed(std::unique_ptr<expression> subexpr)
-      : subexpr(std::move(subexpr)) {}
+  indexed(std::unique_ptr<expression> subexpr) : subexpr(std::move(subexpr)) {}
 
   const expression &subexpression() const { return *subexpr; }
+};
+
+class literal_expression : public expression {
+ private:
+  lexer::token lit;
+
+ public:
+  literal_expression(lexer::token lit) : lit(std::move(lit)) {}
+  const lexer::token &get_literal() const { return lit; }
 };
 }  // namespace parser
 }  // namespace oops_compiler
