@@ -76,6 +76,8 @@ class unary_expression : public expression {
   const expression &get_expression() const { return *expr; }
   type get_type() const { return t; }
 };
+
+output<expression> parse_nary_expression(const char* filename, const std::vector<lexer::token> &tokens, std::size_t begin, classloader &loader, scope &scope);
 }  // namespace parser
 }  // namespace oops_compiler
 

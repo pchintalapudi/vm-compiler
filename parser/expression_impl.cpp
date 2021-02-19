@@ -9,7 +9,6 @@ using namespace oops_compiler::parser;
 
 parse_decl(expression);
 parse_decl(parenthetical);
-parse_decl(indexed);
 
 parse_decl(parenthetical) {
   output<parenthetical> out;
@@ -43,37 +42,6 @@ parse_decl(parenthetical) {
   out.next_token++;
   return out;
 }
-parse_decl(indexed) {
-  output<indexed> out;
-  out.contexts.push_back(tokens[begin].token_context);
-  auto expr = parse<expression>(filename, tokens, begin + 1, loader, scope);
-  std::copy(expr.messages.begin(), expr.messages.end(),
-            std::back_inserter(out.messages));
-  out.next_token = expr.next_token;
-  if (!expr.value) {
-    return out;
-  }
-  if (out.next_token == tokens.size()) {
-    message_builder builder;
-    builder.builder << "Missing closing bracket in expession!";
-    out.messages.push_back(builder.build_message(
-        logger::level::FATAL_ERROR, tokens[out.next_token - 1].token_context));
-    return out;
-  }
-  if (tokens[out.next_token].token_data.token_type !=
-          lexer::token::data::type::OPERATOR_TOKEN ||
-      tokens[out.next_token].token_data.as_operator !=
-          lexer::operators::SQUARE_CLOSE) {
-    message_builder builder;
-    builder.builder << "Missing closing bracket in expression!";
-    out.messages.push_back(builder.build_message(
-        logger::level::ERROR, tokens[out.next_token].token_context));
-  }
-  out.value = std::make_unique<indexed>(std::move(*expr.value));
-  out.contexts.push_back(tokens[out.next_token].token_context);
-  out.next_token++;
-  return out;
-}
 
 parse_decl(break_expression) {
   (void)loader;
@@ -94,6 +62,18 @@ parse_decl(continue_expression) {
   out.contexts.push_back(tokens[begin].token_context);
   out.next_token = begin + 1;
   out.value = std::make_unique<continue_expression>();
+  return out;
+}
+
+parse_decl(identifier_expression) {
+  (void)loader;
+  (void)scope;
+  output<identifier_expression> out;
+  out.filename = filename;
+  out.contexts.push_back(tokens[begin].token_context);
+  out.next_token = begin + 1;
+  out.value = std::make_unique<identifier_expression>(
+      tokens[begin].token_data.as_deferred.start, tokens[begin].token_data.as_deferred.size);
   return out;
 }
 
@@ -131,6 +111,8 @@ parse_decl(expression) {
         case lexer::keywords::CONTINUE:
           return output<expression>::generalize(parse<continue_expression>(
               filename, tokens, begin, loader, scope));
+        case lexer::keywords::NEW:
+          return parse_nary_expression(filename, tokens, begin, loader, scope);
         default: {
           output<expression> out;
           out.filename = filename;
@@ -156,9 +138,9 @@ parse_decl(expression) {
         case lexer::operators::DEC:
         case lexer::operators::INC:
         case lexer::operators::BITNOT:
-        case lexer::operators::LNOT:
-          return output<expression>::generalize(
-              parse<unary_expression>(filename, tokens, begin, loader, scope));
+        case lexer::operators::LNOT: {
+          return parse_nary_expression(filename, tokens, begin, loader, scope);
+        }
         default: {
           output<expression> out;
           out.filename = filename;
@@ -175,13 +157,8 @@ parse_decl(expression) {
           return out;
         }
       }
-    case lexer::token::data::type::LITERAL_TOKEN: {
-      output<expression> out;
-      out.filename = filename;
-      out.contexts.push_back(tokens[begin].token_context);
-      out.next_token = begin + 1;
-      out.value = std::make_unique<literal_expression>(tokens[begin]);
-      return out;
-    }
+    case lexer::token::data::type::LITERAL_TOKEN:
+    case lexer::token::data::type::DEFERRED_TOKEN:
+      return parse_nary_expression(filename, tokens, begin, loader, scope);
   }
 }

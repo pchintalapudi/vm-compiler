@@ -27,16 +27,6 @@ class parenthetical : public expression {
   const expression &subexpression() const { return *subexpr; }
 };
 
-class indexed : public expression {
- private:
-  std::unique_ptr<expression> subexpr;
-
- public:
-  indexed(std::unique_ptr<expression> subexpr) : subexpr(std::move(subexpr)) {}
-
-  const expression &subexpression() const { return *subexpr; }
-};
-
 class literal_expression : public expression {
  private:
   lexer::token lit;
@@ -44,6 +34,19 @@ class literal_expression : public expression {
  public:
   literal_expression(lexer::token lit) : lit(std::move(lit)) {}
   const lexer::token &get_literal() const { return lit; }
+};
+
+class identifier_expression : public expression {
+ private:
+  const char *start;
+  std::size_t size;
+
+ public:
+  identifier_expression(const char *start, std::size_t size)
+      : start(start), size(size) {}
+
+  const char *get_start() const { return start; }
+  std::size_t get_size() const { return size; }
 };
 }  // namespace parser
 }  // namespace oops_compiler

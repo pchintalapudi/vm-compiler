@@ -26,6 +26,9 @@ parse_decl(else_statement);
 parse_decl(return_statement);
 parse_decl(throw_statement);
 parse_decl(semicolon_statement);
+parse_decl(switch_statement);
+parse_decl(case_statement);
+parse_decl(default_statement);
 
 parse_decl(while_statement) {
   output<while_statement> out;
@@ -416,4 +419,205 @@ parse_decl(statement) {
   }
   return output<statement>::generalize(
       parse<semicolon_statement>(filename, tokens, begin, loader, scope));
+}
+
+parse_decl(switch_statement) {
+  output<switch_statement> out;
+  out.filename = filename;
+  out.contexts.push_back(tokens[begin].token_context);
+  begin++;
+  if (tokens.size() == begin) {
+    out.next_token = begin;
+    message_builder builder;
+    builder.builder << "Unexpected end of switch declaration!";
+    out.messages.push_back(builder.build_message(logger::level::FATAL_ERROR,
+                                                 tokens[begin].token_context));
+    return out;
+  }
+  if (tokens[begin].token_data.token_type !=
+          lexer::token::data::type::OPERATOR_TOKEN ||
+      tokens[begin].token_data.as_operator != lexer::operators::ROUND_OPEN) {
+    out.next_token = begin;
+    message_builder builder;
+    builder.builder
+        << "Switch declarations must have a dynamic expression in parentheses!";
+    out.messages.push_back(builder.build_message(logger::level::FATAL_ERROR,
+                                                 tokens[begin].token_context));
+    return out;
+  }
+  output<parenthetical> on =
+      parse<parenthetical>(filename, tokens, begin, loader, scope);
+  std::copy(on.messages.begin(), on.messages.end(),
+            std::back_inserter(out.messages));
+  begin = out.next_token = on.next_token;
+  if (!on.value) {
+    return out;
+  }
+  if (tokens[begin].token_data.token_type !=
+          lexer::token::data::type::OPERATOR_TOKEN ||
+      tokens[begin].token_data.as_operator != lexer::operators::CURLY_OPEN) {
+    out.next_token = begin;
+    message_builder builder;
+    builder.builder
+        << "Switch declarations must have cases inside a braced block!";
+    out.messages.push_back(builder.build_message(logger::level::FATAL_ERROR,
+                                                 tokens[begin].token_context));
+    return out;
+  }
+  begin++;
+  std::vector<case_statement> cases;
+  std::optional<default_statement> def;
+  while (begin < tokens.size() && tokens[begin].token_data.token_type ==
+                                      lexer::token::data::type::KEYWORD_TOKEN) {
+    switch (tokens[begin].token_data.as_keyword) {
+      case lexer::keywords::CASE: {
+        output<case_statement> single =
+            parse<case_statement>(filename, tokens, begin, loader, scope);
+        std::copy(single.messages.begin(), single.messages.end(),
+                  std::back_inserter(out.messages));
+        begin = out.next_token = single.next_token;
+        if (!single.value) {
+          return out;
+        }
+        cases.push_back(std::move(**single.value));
+        break;
+      }
+      case lexer::keywords::DEFAULT: {
+        output<default_statement> d =
+            parse<default_statement>(filename, tokens, begin, loader, scope);
+        std::copy(d.messages.begin(), d.messages.end(),
+                  std::back_inserter(out.messages));
+        if (def) {
+          message_builder builder;
+          builder.builder
+              << "Multiple default cases in the same switch statement!";
+          out.messages.push_back(builder.build_message(
+              logger::level::ERROR, tokens[begin].token_context));
+        }
+        begin = out.next_token = d.next_token;
+        if (!d.value) {
+          return out;
+        }
+        def = std::move(**d.value);
+        break;
+      }
+      default: {
+        out.next_token = begin;
+        message_builder builder;
+        builder.builder << "Invalid keyword in switch statement!";
+        out.messages.push_back(builder.build_message(
+            logger::level::FATAL_ERROR, tokens[begin].token_context));
+        return out;
+      }
+    }
+  }
+  if (begin == tokens.size() ||
+      tokens[begin].token_data.token_type !=
+          lexer::token::data::type::OPERATOR_TOKEN ||
+      tokens[begin].token_data.as_operator != lexer::operators::CURLY_CLOSE) {
+    out.next_token = begin;
+    message_builder builder;
+    builder.builder << "Unclosed switch statement!";
+    out.messages.push_back(builder.build_message(logger::level::FATAL_ERROR,
+                                                 tokens[begin].token_context));
+    return out;
+  }
+  out.next_token = begin + 1;
+  out.value =
+      std::make_unique<switch_statement>(std::move(cases), std::move(def));
+  return out;
+}
+
+parse_decl(default_statement) {
+  output<default_statement> out;
+  out.filename = filename;
+  out.contexts.push_back(tokens[begin].token_context);
+  begin++;
+  if (tokens.size() == begin) {
+    out.next_token = begin;
+    message_builder builder;
+    builder.builder << "Unexpected end of default statement!";
+    out.messages.push_back(builder.build_message(logger::level::FATAL_ERROR,
+                                                 tokens[begin].token_context));
+    return out;
+  }
+  if (tokens[begin].token_data.token_type !=
+          lexer::token::data::type::OPERATOR_TOKEN ||
+      tokens[begin].token_data.as_operator != lexer::operators::COLON) {
+    out.next_token = begin;
+    message_builder builder;
+    builder.builder << "Expected colon after default!";
+    out.messages.push_back(builder.build_message(logger::level::ERROR,
+                                                 tokens[begin].token_context));
+    return out;
+  } else {
+    begin++;
+  }
+  output<statement> block =
+      parse<statement>(filename, tokens, begin, loader, scope);
+  std::copy(block.messages.begin(), block.messages.end(),
+            std::back_inserter(out.messages));
+  out.next_token = block.next_token;
+  if (!block.value) {
+    return out;
+  }
+  out.value = std::make_unique<default_statement>(std::move(*block.value));
+  return out;
+}
+
+parse_decl(case_statement) {
+  output<case_statement> out;
+  out.filename = filename;
+  out.contexts.push_back(tokens[begin].token_context);
+  begin++;
+  if (tokens.size() == begin) {
+    out.next_token = begin;
+    message_builder builder;
+    builder.builder << "Unexpected end of case statement!";
+    out.messages.push_back(builder.build_message(logger::level::FATAL_ERROR,
+                                                 tokens[begin].token_context));
+    return out;
+  }
+  if (tokens[begin].token_data.token_type !=
+      lexer::token::data::type::LITERAL_TOKEN) {
+    out.next_token = begin;
+    message_builder builder;
+    builder.builder << "Case statements must contain a literal value!";
+    out.messages.push_back(builder.build_message(logger::level::FATAL_ERROR,
+                                                 tokens[begin].token_context));
+    return out;
+  }
+  lexer::token literal = tokens[begin];
+  begin++;
+  if (tokens.size() == begin) {
+    out.next_token = begin;
+    message_builder builder;
+    builder.builder << "Unexpected end of case statement!";
+    out.messages.push_back(builder.build_message(logger::level::FATAL_ERROR,
+                                                 tokens[begin].token_context));
+    return out;
+  }
+  if (tokens[begin].token_data.token_type !=
+          lexer::token::data::type::OPERATOR_TOKEN ||
+      tokens[begin].token_data.as_operator != lexer::operators::COLON) {
+    out.next_token = begin;
+    message_builder builder;
+    builder.builder << "Expected colon after case literal!";
+    out.messages.push_back(builder.build_message(logger::level::ERROR,
+                                                 tokens[begin].token_context));
+    return out;
+  } else {
+    begin++;
+  }
+  output<statement> block =
+      parse<statement>(filename, tokens, begin, loader, scope);
+  std::copy(block.messages.begin(), block.messages.end(),
+            std::back_inserter(out.messages));
+  out.next_token = block.next_token;
+  if (!block.value) {
+    return out;
+  }
+  out.value = std::make_unique<case_statement>(std::move(*block.value),
+                                               std::move(literal));
+  return out;
 }

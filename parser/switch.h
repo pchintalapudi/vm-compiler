@@ -29,12 +29,16 @@ class default_statement {
 class switch_statement : public statement {
  private:
   std::vector<case_statement> cases;
-  std::unique_ptr<default_statement> defaulted;
+  std::optional<default_statement> defaulted;
 
  public:
-  switch_statement(std::vector<case_statement> cases) : cases(std::move(cases)) {}
+  switch_statement(std::vector<case_statement> cases,
+                   std::optional<default_statement> defaulted)
+      : cases(std::move(cases)), defaulted(std::move(defaulted)) {}
   const std::vector<case_statement> &get_cases() const;
-  const default_statement &get_default() const { return *defaulted; }
+  const std::optional<default_statement> &get_default() const {
+    return defaulted;
+  }
 };
 }  // namespace parser
 }  // namespace oops_compiler
