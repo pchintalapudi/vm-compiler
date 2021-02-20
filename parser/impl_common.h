@@ -2,14 +2,16 @@
 #define OOPS_COMPILER_PARSER_IMPL_COMMON_H
 
 #include <sstream>
+#include <unordered_set>
+
 #include "../logger/logging.h"
 
 #define parse_decl(type)                                      \
   template <>                                                 \
   output<type> oops_compiler::parser::parse<type>(            \
       const char *filename,                                   \
-      const std::vector<oops_compiler::lexer::token> &tokens, \
-      std::size_t begin)
+      std::vector<oops_compiler::lexer::token> &tokens, \
+      std::size_t begin, std::unordered_set<std::string> &classes)
 
 namespace {
 

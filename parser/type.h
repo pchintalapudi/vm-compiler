@@ -40,19 +40,26 @@ class type_declaration {
   }
   virtual ~type_declaration() = default;
 };
-class type_instantiation : public type_declaration {
+class type_instantiation {
  private:
-  std::vector<const type_instantiation *> instantiations;
+  std::string alias;
+  std::vector<type_instantiation> instantiations;
+  bool arraytype;
 
  public:
-  type_instantiation(const type_declaration &declaration,
-                     std::vector<const type_instantiation *> instantiations)
-      : type_declaration(declaration),
-        instantiations(std::move(instantiations)) {}
-  const std::vector<const type_instantiation *> &get_generic_instantiations()
-      const {
+  type_instantiation(
+      std::string alias,
+      decltype(type_instantiation::instantiations) instantiations,
+      bool arraytype)
+      : alias(std::move(alias)),
+        instantiations(std::move(instantiations)),
+        arraytype(arraytype) {}
+  const std::string &get_name() { return alias; }
+  const decltype(type_instantiation::instantiations) &
+  get_generic_instantiations() const {
     return instantiations;
   }
+  bool is_array_type() const { return arraytype; }
 };
 }  // namespace parser
 }  // namespace oops_compiler

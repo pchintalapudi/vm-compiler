@@ -2,6 +2,7 @@
 #define OOPS_COMPILER_PARSER_BASE_CLASSES_H
 
 #include <string>
+#include <unordered_set>
 #include <variant>
 #include <vector>
 
@@ -30,42 +31,39 @@ struct output {
 };
 template <typename node>
 output<node> parse(const char *filename,
-                   const std::vector<lexer::token> &tokens, std::size_t begin);
+                   std::vector<lexer::token> &tokens, std::size_t begin,
+                   std::unordered_set<std::string> &classes);
 
 typedef std::vector<std::string> package_declaration;
-class source_file {
+
+class imported_class {
  private:
-  const char *filename;
-  std::unordered_map<std::string, const type_declaration *> imports;
+  std::string alias;
   package_declaration package;
 
  public:
-  source_file(const char *filename,
-              std::unordered_map<std::string, const type_declaration *> imports,
+  imported_class(std::string alias, package_declaration package)
+      : alias(std::move(alias)), package(std::move(package)) {}
+
+  const std::string &get_alias() const { return alias; }
+  const package_declaration &get_package() const { return package; }
+};
+class source_file {
+ private:
+  const char *filename;
+  std::vector<imported_class> imports;
+  package_declaration package;
+
+ public:
+  source_file(const char *filename, decltype(source_file::imports) imports,
               package_declaration package)
       : filename(filename),
         imports(std::move(imports)),
         package(std::move(package)) {}
   const char *get_filename() const { return filename; }
-  const std::unordered_map<std::string, const type_declaration *> &get_imports()
-      const {
-    return imports;
-  }
+  const decltype(source_file::imports) &get_imports() const { return imports; }
 
   const package_declaration &get_package() const { return package; }
-};
-
-class imported_class {
- private:
-  std::string alias;
-  const type_declaration *cls;
-
- public:
-  imported_class(std::string alias, const type_declaration &cls)
-      : alias(std::move(alias)), cls(&cls) {}
-
-  const std::string &get_alias() const { return alias; }
-  const type_declaration &get_class() const { return *cls; }
 };
 }  // namespace parser
 }  // namespace oops_compiler

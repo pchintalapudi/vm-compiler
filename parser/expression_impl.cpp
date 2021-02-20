@@ -14,7 +14,7 @@ parse_decl(parenthetical) {
   output<parenthetical> out;
   out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
-  auto expr = parse<expression>(filename, tokens, begin + 1);
+  auto expr = parse<expression>(filename, tokens, begin + 1, classes);
   std::copy(expr.messages.begin(), expr.messages.end(),
             std::back_inserter(out.messages));
   out.next_token = expr.next_token;
@@ -44,6 +44,7 @@ parse_decl(parenthetical) {
 }
 
 parse_decl(break_expression) {
+  (void)classes;
   output<break_expression> out;
   out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
@@ -53,6 +54,7 @@ parse_decl(break_expression) {
 }
 
 parse_decl(continue_expression) {
+  (void)classes;
   output<continue_expression> out;
   out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
@@ -96,12 +98,12 @@ parse_decl(expression) {
       switch (tokens[begin].token_data.as_keyword) {
         case lexer::keywords::BREAK:
           return output<expression>::generalize(
-              parse<break_expression>(filename, tokens, begin));
+              parse<break_expression>(filename, tokens, begin, classes));
         case lexer::keywords::CONTINUE:
-          return output<expression>::generalize(parse<continue_expression>(
-              filename, tokens, begin));
+          return output<expression>::generalize(
+              parse<continue_expression>(filename, tokens, begin, classes));
         case lexer::keywords::NEW:
-          return parse_nary_expression(filename, tokens, begin);
+          return parse_nary_expression(filename, tokens, begin, classes);
         default: {
           output<expression> out;
           out.filename = filename;
@@ -122,13 +124,13 @@ parse_decl(expression) {
       switch (tokens[begin].token_data.as_operator) {
         case lexer::operators::ROUND_OPEN:
           return output<expression>::generalize(
-              parse<parenthetical>(filename, tokens, begin));
+              parse<parenthetical>(filename, tokens, begin, classes));
         case lexer::operators::ADD:
         case lexer::operators::DEC:
         case lexer::operators::INC:
         case lexer::operators::BITNOT:
         case lexer::operators::LNOT: {
-          return parse_nary_expression(filename, tokens, begin);
+          return parse_nary_expression(filename, tokens, begin, classes);
         }
         default: {
           output<expression> out;
@@ -148,40 +150,6 @@ parse_decl(expression) {
       }
     case lexer::token::data::type::LITERAL_TOKEN:
     case lexer::token::data::type::DEFERRED_TOKEN:
-      return parse_nary_expression(filename, tokens, begin);
-  }
-}
-
-parse_decl(unary_expression) {
-  output<unary_expression> out;
-  out.filename = filename;
-  out.contexts.push_back(tokens[begin].token_context);
-
-  return out;
-}
-
-output<expression> oops_compiler::parser::parse_nary_expression(
-    const char *filename, const std::vector<lexer::token> &tokens,
-    std::size_t begin) {
-  switch (tokens[begin].token_data.token_type) {
-    case lexer::token::data::type::DEFERRED_TOKEN: {
-      if (begin == tokens.size() - 1) {
-        return output<expression>::generalize(parse<identifier_expression>(
-            filename, tokens, begin));
-      }
-      switch (tokens[begin + 1].token_data.token_type) {
-        case lexer::token::data::type::OPERATOR_TOKEN: {
-          switch (tokens[begin + 1].token_data.as_operator) {
-            case lexer::operators::CURLY_CLOSE:
-            case lexer::operators::ROUND_CLOSE:
-            case lexer::operators::SQUARE_CLOSE:
-            case lexer::operators::SEMICOLON:
-            case lexer::operators::COLON:
-              return output<expression>::generalize(
-                  parse<identifier_expression>(filename, tokens, begin));
-          }
-        }
-      }
-    }
+      return parse_nary_expression(filename, tokens, begin, classes);
   }
 }

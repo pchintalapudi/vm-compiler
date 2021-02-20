@@ -47,6 +47,11 @@ class identifier_expression : public expression {
   const char *get_start() const { return start; }
   std::size_t get_size() const { return size; }
 };
+
+class empty_expression : public expression {
+ private:
+ public:
+};
 }  // namespace parser
 }  // namespace oops_compiler
 
