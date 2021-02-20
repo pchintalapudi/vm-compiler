@@ -6,7 +6,6 @@
 
 #include "../lexer/token.h"
 #include "base_classes.h"
-#include "scope.h"
 
 namespace oops_compiler {
 namespace parser {

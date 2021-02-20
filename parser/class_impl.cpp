@@ -7,23 +7,6 @@
 
 using namespace oops_compiler::parser;
 
-std::vector<oops_compiler::logger::message>
-class_definition::resolve_definitions(classloader &loader) {
-  std::vector<oops_compiler::logger::message> out;
-  for (std::size_t i = 0; i < this->mtds.size(); i++) {
-    auto &mtd = static_cast<unparsed_method_declaration &>(*this->mtds[i]);
-    auto bb = parse<basic_block>(this->source->get_filename(), mtd.get_tokens(),
-                                 0, loader, mtd.get_scope());
-    std::copy(bb.messages.begin(), bb.messages.end(), std::back_inserter(out));
-    if (!bb.value) {
-      return out;
-    }
-    this->mtds[i] = std::make_unique<method_definition>(std::move(mtd),
-                                                        std::move(**bb.value));
-  }
-  return out;
-}
-
 parse_decl(class_definition);
 parse_decl(unparsed_method_declaration);
 parse_decl(variable);
@@ -77,7 +60,7 @@ parse_decl(variable) {
   } else {
     store = storage::VIRTUAL;
   }
-  auto decl = parse<declaration>(filename, tokens, begin, loader, scope);
+  auto decl = parse<declaration>(filename, tokens, begin);
   std::copy(decl.messages.begin(), decl.messages.end(),
             std::back_inserter(out.messages));
   out.next_token = decl.next_token;
@@ -90,8 +73,6 @@ parse_decl(variable) {
 }
 
 parse_decl(package_declaration) {
-  (void)loader;
-  (void)scope;
   output<package_declaration> out;
   out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
@@ -147,125 +128,6 @@ parse_decl(package_declaration) {
   return out;
 }
 
-parse_decl(imported_class) {
-  output<imported_class> out;
-  out.filename = filename;
-  out.contexts.push_back(tokens[begin].token_context);
-  std::vector<std::string> path;
-  std::string alias;
-  do {
-    begin++;
-    if (tokens.size() == begin) {
-      message_builder builder;
-      builder.builder
-          << "Unexpected end of file while parsing package declaration!";
-      out.messages.push_back(builder.build_message(
-          logger::level::FATAL_ERROR, tokens[begin].token_context));
-      return out;
-    }
-    if (tokens[begin].token_data.token_type !=
-        lexer::token::data::type::DEFERRED_TOKEN) {
-      message_builder builder;
-      builder.builder << "Import folders must not be strings, numbers, "
-                         "operators, or keywords!";
-      out.messages.push_back(builder.build_message(
-          logger::level::ERROR, tokens[begin].token_context));
-      begin--;
-      break;
-    }
-    path.push_back(std::string(tokens[begin].token_data.as_deferred.start,
-                               tokens[begin].token_data.as_deferred.size));
-    begin++;
-    if (tokens.size() == begin) {
-      message_builder builder;
-      builder.builder
-          << "Unexpected end of file while parsing import declaration!";
-      out.messages.push_back(builder.build_message(
-          logger::level::FATAL_ERROR, tokens[begin].token_context));
-      return out;
-    }
-    switch (tokens[begin].token_data.token_type) {
-      case lexer::token::data::type::OPERATOR_TOKEN: {
-        switch (tokens[begin].token_data.as_operator) {
-          case lexer::operators::ACCESS:
-          case lexer::operators::SEMICOLON:
-            break;
-          default: {
-            goto nonidentifier;
-          }
-        }
-        break;
-      }
-      case lexer::token::data::type::KEYWORD_TOKEN: {
-        switch (tokens[begin].token_data.as_keyword) {
-          case lexer::keywords::AS:
-            break;
-          default: {
-            goto nonidentifier;
-          }
-        }
-        break;
-      }
-      default: {
-        goto nonidentifier;
-      }
-    }
-  } while (tokens[begin].token_data.as_operator == lexer::operators::ACCESS);
-  {
-    if (tokens[begin].token_data.token_type ==
-        lexer::token::data::type::KEYWORD_TOKEN) {
-      if (tokens.size() - begin < 2) {
-        message_builder builder;
-        builder.builder
-            << "Unexpected end of file while parsing import declaration!";
-        out.messages.push_back(builder.build_message(
-            logger::level::FATAL_ERROR, tokens[begin].token_context));
-        return out;
-      }
-      begin++;
-      if (tokens[begin].token_data.token_type !=
-          lexer::token::data::type::DEFERRED_TOKEN) {
-        message_builder builder;
-        builder.builder << "Import alias must not be a string, number, "
-                           "operator, or keyword!";
-        out.messages.push_back(builder.build_message(
-            logger::level::ERROR, tokens[begin].token_context));
-        begin--;
-      } else {
-        alias = std::string(tokens[begin].token_data.as_deferred.start,
-                            tokens[begin].token_data.as_deferred.size);
-        begin++;
-      }
-    }
-    if (alias.empty()) {
-      alias = path.back();
-    }
-    begin++;
-    if (tokens[begin].token_data.token_type ==
-            lexer::token::data::type::OPERATOR_TOKEN &&
-        tokens[begin].token_data.as_operator == lexer::operators::SEMICOLON) {
-      goto complete;
-    }
-  }
-nonidentifier : {
-  message_builder builder;
-  builder.builder << "Import declaration must consist of identifiers "
-                     "separated by periods ending in a semicolon!";
-  out.messages.push_back(
-      builder.build_message(logger::level::ERROR, tokens[begin].token_context));
-  out.next_token = begin;
-  if (path.empty()) {
-    return out;
-  }
-}
-complete:
-  scope.add_class(std::move(path), alias);
-  out.next_token = begin;
-  out.value = std::make_unique<imported_class>(
-      alias, *loader.lookup_class(**scope.get_class(alias)));
-  return out;
-}
-
 parse_decl(source_file) {
   output<source_file> out;
   out.filename = filename;
@@ -280,7 +142,7 @@ parse_decl(source_file) {
                                                  tokens[begin].token_context));
   } else {
     auto pack =
-        parse<package_declaration>(filename, tokens, begin, loader, scope);
+        parse<package_declaration>(filename, tokens, begin);
     std::copy(pack.messages.begin(), pack.messages.end(),
               std::back_inserter(out.messages));
     begin = out.next_token = pack.next_token;
@@ -300,7 +162,7 @@ parse_decl(source_file) {
   while (tokens[begin].token_data.token_type ==
              lexer::token::data::type::KEYWORD_TOKEN &&
          tokens[begin].token_data.as_keyword == lexer::keywords::IMPORT) {
-    auto imp = parse<imported_class>(filename, tokens, begin, loader, scope);
+    auto imp = parse<imported_class>(filename, tokens, begin);
     std::copy(imp.messages.begin(), imp.messages.end(),
               std::back_inserter(out.messages));
     begin = out.next_token = imp.next_token;
@@ -332,7 +194,7 @@ parse_decl(source_file) {
       return out;
     }
   }
-  auto cls = parse<class_definition>(filename, tokens, begin, loader, scope);
+  auto cls = parse<class_definition>(filename, tokens, begin);
   std::copy(cls.messages.begin(), cls.messages.end(),
             std::back_inserter(out.messages));
   begin = out.next_token = cls.next_token;

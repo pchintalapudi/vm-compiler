@@ -5,7 +5,6 @@
 
 #include "basic_block.h"
 #include "modifiers.h"
-#include "scope.h"
 #include "type.h"
 #include "expression.h"
 
@@ -22,7 +21,6 @@ class method_declaration : public type_declaration {
   const type_instantiation *ret;
   std::vector<const type_instantiation *> parameters;
   const class_definition *host;
-  scope argument_scope;
 
  private:
  public:
@@ -31,7 +29,7 @@ class method_declaration : public type_declaration {
                      storage store, special spec, bool fin,
                      const type_instantiation &ret,
                      std::vector<const type_instantiation *> parameters,
-                     const class_definition &host, scope method_scope)
+                     const class_definition &host)
       : type_declaration(std::move(name), std::move(generics)),
         mods(mods),
         store(store),
@@ -39,12 +37,10 @@ class method_declaration : public type_declaration {
         fin(fin),
         ret(&ret),
         parameters(std::move(parameters)),
-        host(&host),
-        argument_scope(method_scope) {}
+        host(&host) {}
   modifiers get_access_modifier() const { return mods; }
   storage get_storage() const { return store; }
   special get_special() const { return spec; }
-  scope &get_scope() { return argument_scope; }
   bool is_final() const { return fin; }
   const type_instantiation &get_return_type() const { return *ret; }
   const std::vector<const type_instantiation *> &get_parameter_types() const {
@@ -62,11 +58,10 @@ class unparsed_method_declaration : public method_declaration {
       modifiers mods, storage store, special spec, bool fin,
       const type_instantiation &ret,
       std::vector<const type_instantiation *> parameters,
-      const class_definition &host, scope method_scope,
+      const class_definition &host,
       std::vector<lexer::token> tokens)
       : method_declaration(std::move(name), std::move(generics), mods, store,
-                           spec, fin, ret, parameters, host,
-                           std::move(method_scope)),
+                           spec, fin, ret, parameters, host),
         tokens(std::move(tokens)) {}
   const std::vector<lexer::token> &get_tokens() { return tokens; }
 };

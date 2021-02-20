@@ -8,7 +8,6 @@
 #include "../logger/logging.h"
 #include "base_classes.h"
 #include "method.h"
-#include "scope.h"
 #include "type.h"
 #include "variable.h"
 
@@ -23,7 +22,6 @@ class class_definition : public type_declaration {
   const class_definition *super;
   std::vector<std::unique_ptr<variable>> vars;
   std::vector<std::unique_ptr<method_declaration>> mtds;
-  scope class_scope;
 
  public:
   class_definition(const source_file &source, std::string name,
@@ -56,7 +54,6 @@ class class_definition : public type_declaration {
     return mtds;
   }
   const source_file &get_source() const { return *source; }
-  std::vector<logger::message> resolve_definitions(classloader &loader);
 };
 }  // namespace parser
 }  // namespace oops_compiler

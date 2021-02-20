@@ -11,7 +11,6 @@
 namespace oops_compiler {
 namespace parser {
 class classloader;
-class scope;
 class type_declaration;
 template <typename out_t>
 struct output {
@@ -31,8 +30,7 @@ struct output {
 };
 template <typename node>
 output<node> parse(const char *filename,
-                   const std::vector<lexer::token> &tokens, std::size_t begin,
-                   classloader &loader, scope &scope);
+                   const std::vector<lexer::token> &tokens, std::size_t begin);
 
 typedef std::vector<std::string> package_declaration;
 class source_file {

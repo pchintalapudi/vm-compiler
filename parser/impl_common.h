@@ -9,7 +9,7 @@
   output<type> oops_compiler::parser::parse<type>(            \
       const char *filename,                                   \
       const std::vector<oops_compiler::lexer::token> &tokens, \
-      std::size_t begin, classloader &loader, scope &scope)
+      std::size_t begin)
 
 namespace {
 

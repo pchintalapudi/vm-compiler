@@ -12,14 +12,11 @@ namespace oops_compiler {
 namespace parser {
 class basic_block : public statement {
  private:
-  scope locals;
   std::vector<std::unique_ptr<statement>> substatements;
 
  public:
-  basic_block(scope locals,
-              std::vector<std::unique_ptr<statement>> substatements)
-      : locals(std::move(locals)), substatements(std::move(substatements)) {}
-  const scope &get_locals() { return locals; }
+  basic_block(std::vector<std::unique_ptr<statement>> substatements)
+      : substatements(std::move(substatements)) {}
   const std::vector<std::unique_ptr<statement>> &get_substatements() const {
     return this->substatements;
   }

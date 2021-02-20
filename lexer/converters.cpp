@@ -125,9 +125,7 @@ mappings::mappings() {
     map_keyword(keywords::SET, "set");
     map_keyword(keywords::SHORT, "short");
     map_keyword(keywords::STATIC, "static");
-    map_keyword(keywords::SUPER, "super");
     map_keyword(keywords::SWITCH, "switch");
-    map_keyword(keywords::THIS, "this");
     map_keyword(keywords::THROW, "throw");
     map_keyword(keywords::TRUE, "true");
     map_keyword(keywords::TRY, "try");

@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "../lexer/token.h"
-#include "scope.h"
 
 namespace oops_compiler {
     namespace parser {

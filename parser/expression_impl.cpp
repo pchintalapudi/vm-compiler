@@ -14,7 +14,7 @@ parse_decl(parenthetical) {
   output<parenthetical> out;
   out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
-  auto expr = parse<expression>(filename, tokens, begin + 1, loader, scope);
+  auto expr = parse<expression>(filename, tokens, begin + 1);
   std::copy(expr.messages.begin(), expr.messages.end(),
             std::back_inserter(out.messages));
   out.next_token = expr.next_token;
@@ -44,8 +44,6 @@ parse_decl(parenthetical) {
 }
 
 parse_decl(break_expression) {
-  (void)loader;
-  (void)scope;
   output<break_expression> out;
   out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
@@ -55,8 +53,6 @@ parse_decl(break_expression) {
 }
 
 parse_decl(continue_expression) {
-  (void)loader;
-  (void)scope;
   output<continue_expression> out;
   out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
@@ -66,14 +62,22 @@ parse_decl(continue_expression) {
 }
 
 parse_decl(identifier_expression) {
-  (void)loader;
-  (void)scope;
   output<identifier_expression> out;
   out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
   out.next_token = begin + 1;
   out.value = std::make_unique<identifier_expression>(
-      tokens[begin].token_data.as_deferred.start, tokens[begin].token_data.as_deferred.size);
+      tokens[begin].token_data.as_deferred.start,
+      tokens[begin].token_data.as_deferred.size);
+  return out;
+}
+
+parse_decl(literal_expression) {
+  output<literal_expression> out;
+  out.filename = filename;
+  out.contexts.push_back(tokens[begin].token_context);
+  out.next_token = begin + 1;
+  out.value = std::make_unique<literal_expression>(tokens[begin]);
   return out;
 }
 
@@ -84,21 +88,6 @@ struct expression_tree {
   std::unique_ptr<expression_tree> left, right;
 };
 
-typedef oops_compiler::lexer::operators ops;
-
-std::unordered_map<ops, int> precedence{
-    {ops::COMMA, 0},    {ops::ADDEQ, 1},    {ops::BITANDEQ, 1},
-    {ops::BITOREQ, 1},  {ops::BITSLLEQ, 1}, {ops::BITSRAEQ, 1},
-    {ops::BITSRLEQ, 1}, {ops::BITXOREQ, 1}, {ops::DIVEQ, 1},
-    {ops::MODEQ, 1},    {ops::EQ, 1},       {ops::MULEQ, 1},
-    {ops::OR, 2},       {ops::AND, 3},      {ops::BITOR, 4},
-    {ops::BITXOR, 5},   {ops::BITAND, 6},   {ops::EQUALS, 7},
-    {ops::NEQUALS, 7},  {ops::LESS, 8},     {ops::LEQUALS, 8},
-    {ops::GEQUALS, 8},  {ops::GREATER, 8},  {ops::BITSLL, 9},
-    {ops::BITSRA, 9},   {ops::BITSRL, 9},   {ops::ADD, 10},
-    {ops::SUB, 10},     {ops::MUL, 11},     {ops::MOD, 11},
-    {ops::DIV, 11},     {ops::INC, 12},     {ops::DEC, 12},
-    {ops::BITNOT, 12},  {ops::LNOT, 12}};
 }  // namespace
 
 parse_decl(expression) {
@@ -107,12 +96,12 @@ parse_decl(expression) {
       switch (tokens[begin].token_data.as_keyword) {
         case lexer::keywords::BREAK:
           return output<expression>::generalize(
-              parse<break_expression>(filename, tokens, begin, loader, scope));
+              parse<break_expression>(filename, tokens, begin));
         case lexer::keywords::CONTINUE:
           return output<expression>::generalize(parse<continue_expression>(
-              filename, tokens, begin, loader, scope));
+              filename, tokens, begin));
         case lexer::keywords::NEW:
-          return parse_nary_expression(filename, tokens, begin, loader, scope);
+          return parse_nary_expression(filename, tokens, begin);
         default: {
           output<expression> out;
           out.filename = filename;
@@ -133,13 +122,13 @@ parse_decl(expression) {
       switch (tokens[begin].token_data.as_operator) {
         case lexer::operators::ROUND_OPEN:
           return output<expression>::generalize(
-              parse<parenthetical>(filename, tokens, begin, loader, scope));
+              parse<parenthetical>(filename, tokens, begin));
         case lexer::operators::ADD:
         case lexer::operators::DEC:
         case lexer::operators::INC:
         case lexer::operators::BITNOT:
         case lexer::operators::LNOT: {
-          return parse_nary_expression(filename, tokens, begin, loader, scope);
+          return parse_nary_expression(filename, tokens, begin);
         }
         default: {
           output<expression> out;
@@ -159,6 +148,40 @@ parse_decl(expression) {
       }
     case lexer::token::data::type::LITERAL_TOKEN:
     case lexer::token::data::type::DEFERRED_TOKEN:
-      return parse_nary_expression(filename, tokens, begin, loader, scope);
+      return parse_nary_expression(filename, tokens, begin);
+  }
+}
+
+parse_decl(unary_expression) {
+  output<unary_expression> out;
+  out.filename = filename;
+  out.contexts.push_back(tokens[begin].token_context);
+
+  return out;
+}
+
+output<expression> oops_compiler::parser::parse_nary_expression(
+    const char *filename, const std::vector<lexer::token> &tokens,
+    std::size_t begin) {
+  switch (tokens[begin].token_data.token_type) {
+    case lexer::token::data::type::DEFERRED_TOKEN: {
+      if (begin == tokens.size() - 1) {
+        return output<expression>::generalize(parse<identifier_expression>(
+            filename, tokens, begin));
+      }
+      switch (tokens[begin + 1].token_data.token_type) {
+        case lexer::token::data::type::OPERATOR_TOKEN: {
+          switch (tokens[begin + 1].token_data.as_operator) {
+            case lexer::operators::CURLY_CLOSE:
+            case lexer::operators::ROUND_CLOSE:
+            case lexer::operators::SQUARE_CLOSE:
+            case lexer::operators::SEMICOLON:
+            case lexer::operators::COLON:
+              return output<expression>::generalize(
+                  parse<identifier_expression>(filename, tokens, begin));
+          }
+        }
+      }
+    }
   }
 }

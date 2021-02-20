@@ -3,16 +3,16 @@
 #include "../lexer/converters.h"
 #include "basic_block.h"
 #include "classloader.h"
+#include "declaration.h"   // TODO
 #include "enhanced_for.h"  // TODO
 #include "expression.h"
 #include "for.h"  // TODO
 #include "ifelse.h"
 #include "impl_common.h"
 #include "returns.h"
-#include "scope.h"
 #include "semicolon.h"
-#include "statement.h"  // TODO
-#include "switch.h"     // TODO
+#include "statement.h"
+#include "switch.h"
 #include "throw.h"
 #include "whiles.h"
 
@@ -52,8 +52,7 @@ parse_decl(while_statement) {
     out.next_token = begin;
     return out;
   }
-  auto conditional =
-      parse<parenthetical>(filename, tokens, begin, loader, scope);
+  auto conditional = parse<parenthetical>(filename, tokens, begin);
   std::copy(conditional.messages.begin(), conditional.messages.end(),
             std::back_inserter(out.messages));
   out.next_token = conditional.next_token;
@@ -61,7 +60,7 @@ parse_decl(while_statement) {
     return out;
   }
   begin = out.next_token;
-  auto stmnt = parse<statement>(filename, tokens, begin, loader, scope);
+  auto stmnt = parse<statement>(filename, tokens, begin);
   std::copy(stmnt.messages.begin(), stmnt.messages.end(),
             std::back_inserter(out.messages));
   out.next_token = stmnt.next_token;
@@ -94,8 +93,7 @@ parse_decl(if_statement) {
     out.next_token = begin;
     return out;
   }
-  auto conditional =
-      parse<parenthetical>(filename, tokens, begin, loader, scope);
+  auto conditional = parse<parenthetical>(filename, tokens, begin);
   std::copy(conditional.messages.begin(), conditional.messages.end(),
             std::back_inserter(out.messages));
   out.next_token = conditional.next_token;
@@ -103,7 +101,7 @@ parse_decl(if_statement) {
     return out;
   }
   begin = out.next_token;
-  auto stmnt = parse<statement>(filename, tokens, begin, loader, scope);
+  auto stmnt = parse<statement>(filename, tokens, begin);
   std::copy(stmnt.messages.begin(), stmnt.messages.end(),
             std::back_inserter(out.messages));
   out.next_token = stmnt.next_token;
@@ -126,7 +124,7 @@ parse_decl(else_statement) {
     out.next_token = begin;
     return out;
   }
-  auto stmnt = parse<statement>(filename, tokens, begin, loader, scope);
+  auto stmnt = parse<statement>(filename, tokens, begin);
   std::copy(stmnt.messages.begin(), stmnt.messages.end(),
             std::back_inserter(out.messages));
   out.next_token = stmnt.next_token;
@@ -149,19 +147,17 @@ parse_decl(basic_block) {
         logger::level::FATAL_ERROR, tokens[out.next_token - 1].token_context));
     return out;
   }
-  auto subscope = scope.extend();
   if (tokens[begin].token_data.token_type ==
           lexer::token::data::type::OPERATOR_TOKEN &&
       tokens[begin].token_data.as_operator == lexer::operators::CURLY_CLOSE) {
     out.contexts.push_back(tokens[begin].token_context);
     out.next_token = begin + 1;
-    out.value = std::make_unique<basic_block>(
-        subscope, std::vector<std::unique_ptr<statement>>{});
+    out.value = std::make_unique<basic_block>(std::vector<std::unique_ptr<statement>>{});
     return out;
   }
   std::vector<std::unique_ptr<statement>> statements;
   do {
-    auto stmnt = parse<statement>(filename, tokens, begin, loader, subscope);
+    auto stmnt = parse<statement>(filename, tokens, begin);
     std::copy(stmnt.messages.begin(), stmnt.messages.end(),
               std::back_inserter(out.messages));
     out.next_token = stmnt.next_token;
@@ -185,7 +181,7 @@ parse_decl(basic_block) {
     out.next_token = begin + 1;
   }
   out.value =
-      std::make_unique<basic_block>(std::move(subscope), std::move(statements));
+      std::make_unique<basic_block>(std::move(statements));
   return out;
 }
 
@@ -194,8 +190,7 @@ parse_decl(return_statement) {
   out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
   begin++;
-  auto stmnt =
-      parse<semicolon_statement>(filename, tokens, begin, loader, scope);
+  auto stmnt = parse<semicolon_statement>(filename, tokens, begin);
   std::copy(stmnt.messages.begin(), stmnt.messages.end(),
             std::back_inserter(out.messages));
   out.next_token = stmnt.next_token;
@@ -211,8 +206,7 @@ parse_decl(throw_statement) {
   out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
   begin++;
-  auto stmnt =
-      parse<semicolon_statement>(filename, tokens, begin, loader, scope);
+  auto stmnt = parse<semicolon_statement>(filename, tokens, begin);
   std::copy(stmnt.messages.begin(), stmnt.messages.end(),
             std::back_inserter(out.messages));
   out.next_token = stmnt.next_token;
@@ -228,7 +222,7 @@ parse_decl(semicolon_statement) {
   out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
   begin++;
-  auto expr = parse<expression>(filename, tokens, begin, loader, scope);
+  auto expr = parse<expression>(filename, tokens, begin);
   std::copy(expr.messages.begin(), expr.messages.end(),
             std::back_inserter(out.messages));
   out.next_token = expr.next_token;
@@ -242,7 +236,7 @@ parse_decl(semicolon_statement) {
 std::variant<output<for_statement>, output<enhanced_for_statement>>
 parse_generalized_for(const char *filename,
                       const std::vector<oops_compiler::lexer::token> &tokens,
-                      std::size_t begin, classloader &loader, scope &scope);
+                      std::size_t begin);
 
 parse_decl(statement) {
   switch (tokens[begin].token_data.token_type) {
@@ -257,19 +251,16 @@ parse_decl(statement) {
         case lexer::keywords::SHORT:
         case lexer::keywords::AUTO:
           return output<statement>::generalize(
-              parse<declaration>(filename, tokens, begin, loader, scope));
+              parse<declaration>(filename, tokens, begin));
         case lexer::keywords::BREAK:
         case lexer::keywords::CONTINUE:
         case lexer::keywords::FALSE:
-        case lexer::keywords::SUPER:
         case lexer::keywords::NIL:
         case lexer::keywords::TRUE:
         case lexer::keywords::NEW:
-        case lexer::keywords::THIS:
           break;
         case lexer::keywords::FOR: {
-          auto out =
-              parse_generalized_for(filename, tokens, begin, loader, scope);
+          auto out = parse_generalized_for(filename, tokens, begin);
           return std::holds_alternative<output<for_statement>>(out)
                      ? output<statement>::generalize(
                            std::move(std::get<output<for_statement>>(out)))
@@ -278,22 +269,22 @@ parse_decl(statement) {
         }
         case lexer::keywords::WHILE:
           return output<statement>::generalize(
-              parse<while_statement>(filename, tokens, begin, loader, scope));
+              parse<while_statement>(filename, tokens, begin));
         case lexer::keywords::ELSE:
           return output<statement>::generalize(
-              parse<else_statement>(filename, tokens, begin, loader, scope));
+              parse<else_statement>(filename, tokens, begin));
         case lexer::keywords::IF:
           return output<statement>::generalize(
-              parse<if_statement>(filename, tokens, begin, loader, scope));
+              parse<if_statement>(filename, tokens, begin));
         case lexer::keywords::RETURN:
           return output<statement>::generalize(
-              parse<return_statement>(filename, tokens, begin, loader, scope));
+              parse<return_statement>(filename, tokens, begin));
         case lexer::keywords::SWITCH:
           return output<statement>::generalize(
-              parse<switch_statement>(filename, tokens, begin, loader, scope));
+              parse<switch_statement>(filename, tokens, begin));
         case lexer::keywords::THROW:
           return output<statement>::generalize(
-              parse<throw_statement>(filename, tokens, begin, loader, scope));
+              parse<throw_statement>(filename, tokens, begin));
         case lexer::keywords::AS:
         case lexer::keywords::CASE:
         case lexer::keywords::CLASS:
@@ -332,8 +323,7 @@ parse_decl(statement) {
                                      tokens[begin].token_data.as_keyword)]
                           << " cannot begin a statement!";
           if (begin < tokens.size()) {
-            auto out =
-                parse<statement>(filename, tokens, begin + 1, loader, scope);
+            auto out = parse<statement>(filename, tokens, begin + 1);
             out.messages.push_back(builder.build_message(
                 logger::level::ERROR, tokens[begin].token_context));
             return out;
@@ -362,8 +352,7 @@ parse_decl(statement) {
                                      tokens[begin].token_data.as_keyword)]
                           << " cannot begin a statement!";
           if (begin < tokens.size()) {
-            auto out =
-                parse<statement>(filename, tokens, begin + 1, loader, scope);
+            auto out = parse<statement>(filename, tokens, begin + 1);
             out.messages.push_back(builder.build_message(
                 logger::level::ERROR, tokens[begin].token_context));
             return out;
@@ -379,7 +368,7 @@ parse_decl(statement) {
         }
         case lexer::operators::CURLY_OPEN:
           return output<statement>::generalize(
-              parse<basic_block>(filename, tokens, begin, loader, scope));
+              parse<basic_block>(filename, tokens, begin));
         case lexer::operators::ROUND_OPEN:
         case lexer::operators::ADD:
         case lexer::operators::BITNOT:
@@ -411,14 +400,14 @@ parse_decl(statement) {
             tokens[begin + 1].token_data.as_operator !=
                 lexer::operators::ACCESS) {
           return output<statement>::generalize(
-              parse<declaration>(filename, tokens, begin, loader, scope));
+              parse<declaration>(filename, tokens, begin));
         }
       }
       break;
     }
   }
   return output<statement>::generalize(
-      parse<semicolon_statement>(filename, tokens, begin, loader, scope));
+      parse<semicolon_statement>(filename, tokens, begin));
 }
 
 parse_decl(switch_statement) {
@@ -445,8 +434,7 @@ parse_decl(switch_statement) {
                                                  tokens[begin].token_context));
     return out;
   }
-  output<parenthetical> on =
-      parse<parenthetical>(filename, tokens, begin, loader, scope);
+  output<parenthetical> on = parse<parenthetical>(filename, tokens, begin);
   std::copy(on.messages.begin(), on.messages.end(),
             std::back_inserter(out.messages));
   begin = out.next_token = on.next_token;
@@ -472,7 +460,7 @@ parse_decl(switch_statement) {
     switch (tokens[begin].token_data.as_keyword) {
       case lexer::keywords::CASE: {
         output<case_statement> single =
-            parse<case_statement>(filename, tokens, begin, loader, scope);
+            parse<case_statement>(filename, tokens, begin);
         std::copy(single.messages.begin(), single.messages.end(),
                   std::back_inserter(out.messages));
         begin = out.next_token = single.next_token;
@@ -484,7 +472,7 @@ parse_decl(switch_statement) {
       }
       case lexer::keywords::DEFAULT: {
         output<default_statement> d =
-            parse<default_statement>(filename, tokens, begin, loader, scope);
+            parse<default_statement>(filename, tokens, begin);
         std::copy(d.messages.begin(), d.messages.end(),
                   std::back_inserter(out.messages));
         if (def) {
@@ -553,8 +541,7 @@ parse_decl(default_statement) {
   } else {
     begin++;
   }
-  output<statement> block =
-      parse<statement>(filename, tokens, begin, loader, scope);
+  output<statement> block = parse<statement>(filename, tokens, begin);
   std::copy(block.messages.begin(), block.messages.end(),
             std::back_inserter(out.messages));
   out.next_token = block.next_token;
@@ -609,8 +596,7 @@ parse_decl(case_statement) {
   } else {
     begin++;
   }
-  output<statement> block =
-      parse<statement>(filename, tokens, begin, loader, scope);
+  output<statement> block = parse<statement>(filename, tokens, begin);
   std::copy(block.messages.begin(), block.messages.end(),
             std::back_inserter(out.messages));
   out.next_token = block.next_token;
