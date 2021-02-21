@@ -65,10 +65,7 @@ enum class operators {
 };
 enum class keywords {
   AS,
-  AUTO,
-  BOOLEAN,
   BREAK,
-  BYTE,
   CASE,
   CATCH,
   CLASS,
@@ -77,28 +74,23 @@ enum class keywords {
   DEFAULT,
   DEF,
   DO,
-  DOUBLE,
   ELSE,
   ENUM,
   EXTENDS,
-  FALSE,
   FINAL,
   FINALLY,
-  FLOAT,
   FOR,
   GET,
   GOTO,
   IF,
+  IS,
   IMPORT,
   IMPLEMENTS,
-  INT,
   INTERFACE,
   INSTANCEOF,
   INTRINSIC,
-  LONG,
   NATIVE,
   NEW,
-  NIL,
   OPERATOR,
   PACKAGE,
   PRIVATE,
@@ -106,16 +98,11 @@ enum class keywords {
   PUBLIC,
   RETURN,
   SET,
-  SHORT,
   STATIC,
-  // SUPER,
   SWITCH,
-  // THIS,
   THROW,
-  TRUE,
   TRY,
   USING,
-  VOID,
   WHILE,
   __COUNT__
 };
@@ -123,9 +110,9 @@ enum class keywords {
 struct mappings {
   std::unordered_map<std::string, operators> string_to_operators{};
   std::unordered_map<std::string, keywords> string_to_keywords{};
-  std::array<const char*, static_cast<std::size_t>(operators::__COUNT__)>
+  std::array<const char *, static_cast<std::size_t>(operators::__COUNT__)>
       operators_to_strings{};
-  std::array<const char*, static_cast<std::size_t>(keywords::__COUNT__)>
+  std::array<const char *, static_cast<std::size_t>(keywords::__COUNT__)>
       keywords_to_strings{};
 
   mappings();

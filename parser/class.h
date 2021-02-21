@@ -15,24 +15,22 @@ namespace oops_compiler {
 namespace parser {
 
 class classloader;
-class class_definition : public type_declaration {
+class class_definition {
  private:
-  const source_file *source;
+  type_declaration decl;
   std::vector<const class_definition *> sub_classes, interfaces;
   const class_definition *super;
   std::vector<std::unique_ptr<variable>> vars;
   std::vector<std::unique_ptr<method_declaration>> mtds;
 
  public:
-  class_definition(const source_file &source, std::string name,
-                   std::vector<generic_declaration> generics,
+  class_definition(type_declaration decl,
                    std::vector<const class_definition *> sub_classes,
                    std::vector<const class_definition *> interfaces,
                    const class_definition &super,
                    std::vector<std::unique_ptr<variable>> vars,
                    std::vector<std::unique_ptr<method_declaration>> mtds)
-      : type_declaration(std::move(name), std::move(generics)),
-        source(&source),
+      : decl(std::move(decl)),
         sub_classes(std::move(sub_classes)),
         interfaces(std::move(interfaces)),
         super(&super),
@@ -53,7 +51,7 @@ class class_definition : public type_declaration {
   const std::vector<std::unique_ptr<method_declaration>> &methods() const {
     return mtds;
   }
-  const source_file &get_source() const { return *source; }
+  virtual ~class_definition() = default;
 };
 }  // namespace parser
 }  // namespace oops_compiler

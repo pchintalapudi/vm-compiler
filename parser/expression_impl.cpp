@@ -64,6 +64,7 @@ parse_decl(continue_expression) {
 }
 
 parse_decl(identifier_expression) {
+  (void)classes;
   output<identifier_expression> out;
   out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
@@ -75,6 +76,7 @@ parse_decl(identifier_expression) {
 }
 
 parse_decl(literal_expression) {
+  (void)classes;
   output<literal_expression> out;
   out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);

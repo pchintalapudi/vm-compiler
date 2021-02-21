@@ -244,21 +244,8 @@ parse_decl(statement) {
   switch (tokens[begin].token_data.token_type) {
     case lexer::token::data::type::KEYWORD_TOKEN: {
       switch (tokens[begin].token_data.as_keyword) {
-        case lexer::keywords::BOOLEAN:
-        case lexer::keywords::BYTE:
-        case lexer::keywords::DOUBLE:
-        case lexer::keywords::FLOAT:
-        case lexer::keywords::INT:
-        case lexer::keywords::LONG:
-        case lexer::keywords::SHORT:
-        case lexer::keywords::AUTO:
-          return output<statement>::generalize(
-              parse<declaration>(filename, tokens, begin, classes));
         case lexer::keywords::BREAK:
         case lexer::keywords::CONTINUE:
-        case lexer::keywords::FALSE:
-        case lexer::keywords::NIL:
-        case lexer::keywords::TRUE:
         case lexer::keywords::NEW:
           break;
         case lexer::keywords::FOR: {
@@ -296,6 +283,7 @@ parse_decl(statement) {
         case lexer::keywords::DO:  // TODO
         case lexer::keywords::ENUM:
         case lexer::keywords::EXTENDS:
+        case lexer::keywords::IS:
         case lexer::keywords::FINAL:
         case lexer::keywords::TRY:      // TODO
         case lexer::keywords::CATCH:    // TODO
@@ -316,7 +304,6 @@ parse_decl(statement) {
         case lexer::keywords::SET:
         case lexer::keywords::STATIC:
         case lexer::keywords::USING:  // TODO
-        case lexer::keywords::VOID:
         case lexer::keywords::__COUNT__: {
           message_builder builder;
           builder.builder << "Keyword "
@@ -824,10 +811,12 @@ parse_decl(declaration) {
       return out;
     }
     out.value = std::make_unique<declaration>(
-        std::move(**type.value), std::move(name), std::optional<std::unique_ptr<expression>>{std::move(*expr.value)});
+        std::move(**type.value), std::move(name),
+        std::optional<std::unique_ptr<expression>>{std::move(*expr.value)});
   } else {
     out.value = std::make_unique<declaration>(
-        std::move(**type.value), std::move(name), std::optional<std::unique_ptr<expression>>{});
+        std::move(**type.value), std::move(name),
+        std::optional<std::unique_ptr<expression>>{});
   }
   return out;
 }

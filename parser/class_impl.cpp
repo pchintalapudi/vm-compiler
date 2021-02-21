@@ -73,7 +73,7 @@ parse_decl(variable) {
 }
 
 parse_decl(package_declaration) {
-  (void) classes;
+  (void)classes;
   output<package_declaration> out;
   out.filename = filename;
   out.contexts.push_back(tokens[begin].token_context);
@@ -341,4 +341,356 @@ parse_decl(source_file) {
   }
   out.value = std::make_unique<source_file>(filename, std::move(imports),
                                             std::move(package));
+}
+
+parse_decl(unparsed_method_declaration) {
+  output<unparsed_method_declaration> out;
+  out.filename = filename;
+  out.next_token = begin;
+  out.contexts.push_back(tokens[out.next_token].token_context);
+  modifiers mods;
+  switch (tokens[out.next_token].token_data.as_keyword) {
+    case lexer::keywords::PRIVATE:
+      mods = modifiers::PRIVATE;
+      break;
+    case lexer::keywords::PACKAGE:
+      mods = modifiers::PACKAGE;
+      break;
+    case lexer::keywords::PROTECTED:
+      mods = modifiers::PROTECTED;
+      break;
+    case lexer::keywords::PUBLIC:
+      mods = modifiers::PUBLIC;
+      break;
+    default: {
+      message_builder builder;
+      builder.builder << "Unexpected error in type instantiation (unknown "
+                         "token appeared)!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+  }
+  out.next_token++;
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of method declaration!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  storage store = storage::VIRTUAL;
+  bool fin = false;
+  if (tokens[out.next_token].token_data.token_type !=
+      lexer::token::data::type::KEYWORD_TOKEN) {
+    message_builder builder;
+    builder.builder << "Expected one of 'static', 'final', 'get', 'set', "
+                       "'operator', or 'def' in method declaration!";
+    out.messages.push_back(builder.build_message(
+        logger::level::ERROR, tokens[out.next_token].token_context));
+  }
+  switch (tokens[out.next_token].token_data.as_keyword) {
+    case lexer::keywords::STATIC:
+      store = storage::STATIC;
+      out.next_token++;
+      break;
+    case lexer::keywords::FINAL:
+      fin = true;
+      out.next_token++;
+      break;
+    default:
+      break;
+  }
+  out.next_token++;
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of method declaration!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  special spec = special::NONE;
+  if (tokens[out.next_token].token_data.token_type !=
+      lexer::token::data::type::KEYWORD_TOKEN) {
+    message_builder builder;
+    builder.builder << "Expected one of 'static', 'final', 'get', 'set', "
+                       "'operator', or 'def' in method declaration!";
+    out.messages.push_back(builder.build_message(
+        logger::level::ERROR, tokens[out.next_token].token_context));
+  }
+  switch (tokens[out.next_token].token_data.as_keyword) {
+    case lexer::keywords::NATIVE:
+      spec = special::NATIVE;
+      out.next_token++;
+      break;
+    case lexer::keywords::INTRINSIC:
+      spec = special::INTRINSIC;
+      out.next_token++;
+      break;
+    default:
+      break;
+  }
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of method declaration!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  if (tokens[out.next_token].token_data.token_type !=
+      lexer::token::data::type::KEYWORD_TOKEN) {
+    message_builder builder;
+    builder.builder << "Expected one of 'get', 'set', 'operator', or 'def' in "
+                       "method declaration!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  method_declaration::type mtype;
+  switch (tokens[out.next_token].token_data.as_keyword) {
+    case lexer::keywords::GET:
+      mtype = method_declaration::type::GET;
+      break;
+    case lexer::keywords::SET:
+      mtype = method_declaration::type::SET;
+      break;
+    case lexer::keywords::OPERATOR:
+      mtype = method_declaration::type::OPERATOR;
+      break;
+    case lexer::keywords::DEF:
+      mtype = method_declaration::type::DEF;
+      break;
+    case lexer::keywords::CONSTRUCTOR:
+      if (store == storage::STATIC) {
+        message_builder builder;
+        builder.builder << "Constructors cannot be static!";
+        out.messages.push_back(builder.build_message(
+            logger::level::ERROR, tokens[out.next_token].token_context));
+      }
+      if (fin) {
+        message_builder builder;
+        builder.builder << "Constructors are implicitly final!";
+        out.messages.push_back(builder.build_message(
+            logger::level::WARNING, tokens[out.next_token].token_context));
+      }
+      mtype = method_declaration::type::CONSTRUCTOR;
+      break;
+    default: {
+      message_builder builder;
+      builder.builder
+          << "Expected one of 'get', 'set', 'operator', or 'def' in "
+             "method declaration!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+  }
+  out.next_token++;
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of method declaration!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  if (tokens[out.next_token].token_data.token_type !=
+      lexer::token::data::type::DEFERRED_TOKEN) {
+    message_builder builder;
+    builder.builder << "Expected an identifier for method name!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  output<type_declaration> method_name =
+      parse<type_declaration>(filename, tokens, out.next_token, classes);
+  std::copy(method_name.messages.begin(), method_name.messages.end(),
+            std::back_inserter(out.messages));
+  out.next_token = method_name.next_token;
+  if (!method_name.value) {
+    return out;
+  }
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of method declaration!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  if (tokens[out.next_token].token_data.token_type !=
+          lexer::token::data::type::OPERATOR_TOKEN ||
+      tokens[out.next_token].token_data.as_operator !=
+          lexer::operators::ROUND_OPEN) {
+    message_builder builder;
+    builder.builder << "Expected parameters to begin with opening parenthesis!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  out.next_token++;
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of method declaration!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  bool first_argument_correction = true;
+  std::vector<argument> arguments;
+  while (tokens[out.next_token].token_data.token_type !=
+             lexer::token::data::type::OPERATOR_TOKEN &&
+         tokens[out.next_token].token_data.as_operator !=
+             lexer::operators::ROUND_CLOSE) {
+    out.next_token -= first_argument_correction;
+    first_argument_correction = false;
+    out.next_token++;
+    if (tokens.size() == out.next_token) {
+      message_builder builder;
+      builder.builder << "Unexpected end of method declaration!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    if (tokens[out.next_token].token_data.token_type !=
+        lexer::token::data::type::DEFERRED_TOKEN) {
+      message_builder builder;
+      builder.builder << "Method argument must begin with an identifier!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    output<argument> arg =
+        parse<argument>(filename, tokens, out.next_token, classes);
+    std::copy(arg.messages.begin(), arg.messages.end(),
+              std::back_inserter(out.messages));
+    out.next_token = arg.next_token;
+    if (!arg.value) {
+      return out;
+    }
+    arguments.push_back(std::move(**arg.value));
+    if (tokens.size() == out.next_token) {
+      message_builder builder;
+      builder.builder << "Unexpected end of method declaration!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    while (tokens[out.next_token].token_data.token_type !=
+               lexer::token::data::type::OPERATOR_TOKEN ||
+           (tokens[out.next_token].token_data.as_operator !=
+                lexer::operators::ROUND_CLOSE &&
+            tokens[out.next_token].token_data.as_operator !=
+                lexer::operators::COMMA)) {
+      message_builder builder;
+      builder.builder << "Expected comma or close parenthesis to continue "
+                         "argument declarations!";
+      out.messages.push_back(builder.build_message(
+          logger::level::ERROR, tokens[out.next_token].token_context));
+      out.next_token++;
+      if (tokens.size() == out.next_token) {
+        message_builder builder;
+        builder.builder << "Unexpected end of method declaration!";
+        out.messages.push_back(builder.build_message(
+            logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+        return out;
+      }
+    }
+  }
+  out.next_token++;
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of method declaration!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  type_instantiation ret{"void", {}, false};
+  if (mtype != method_declaration::type::CONSTRUCTOR) {
+    if (tokens[out.next_token].token_data.token_type !=
+            lexer::token::data::type::OPERATOR_TOKEN ||
+        tokens[out.next_token].token_data.as_operator !=
+            lexer::operators::CAST) {
+      message_builder builder;
+      builder.builder
+          << "Expected parameters to begin with opening parenthesis!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    out.next_token++;
+    if (tokens.size() == out.next_token) {
+      message_builder builder;
+      builder.builder << "Unexpected end of method declaration!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    if (tokens[out.next_token].token_data.token_type !=
+        lexer::token::data::type::DEFERRED_TOKEN) {
+      message_builder builder;
+      builder.builder << "Return type must begin with an identifier!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    output<type_instantiation> rettype =
+        parse<type_instantiation>(filename, tokens, begin, classes);
+    std::copy(rettype.messages.begin(), rettype.messages.end(),
+              std::back_inserter(out.messages));
+    out.next_token = rettype.next_token;
+    if (!rettype.value) {
+      return out;
+    }
+    ret = std::move(**rettype.value);
+  }
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of method declaration!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  if (tokens[out.next_token].token_data.token_type !=
+          lexer::token::data::type::OPERATOR_TOKEN ||
+      (tokens[out.next_token].token_data.as_operator !=
+           lexer::operators::SEMICOLON &&
+       tokens[out.next_token].token_data.as_operator !=
+           lexer::operators::CURLY_OPEN)) {
+    message_builder builder;
+    builder.builder << "Expected either a semicolon or method body here!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  std::vector<lexer::token> subtokens;
+  if (tokens[out.next_token].token_data.as_operator ==
+      lexer::operators::SEMICOLON) {
+    subtokens.push_back(tokens[out.next_token]);
+    out.next_token++;
+  } else {
+    std::size_t nested = 0;
+    do {
+      if (tokens.size() == out.next_token) {
+        message_builder builder;
+        builder.builder << "Unexpected end of method body!";
+        out.messages.push_back(builder.build_message(
+            logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+        return out;
+      }
+      if (tokens[out.next_token].token_data.token_type ==
+          lexer::token::data::type::OPERATOR_TOKEN) {
+        if (tokens[out.next_token].token_data.as_operator ==
+            lexer::operators::CURLY_OPEN) {
+          nested++;
+        } else if (tokens[out.next_token].token_data.as_operator ==
+                   lexer::operators::CURLY_CLOSE) {
+          nested--;
+        }
+      }
+      subtokens.push_back(tokens[out.next_token++]);
+    } while (nested);
+  }
+  out.value = std::make_unique<unparsed_method_declaration>(
+      std::move(**method_name.value), mods, store, spec, fin, std::move(ret),
+      std::move(arguments), std::move(subtokens));
+  return out;
 }
