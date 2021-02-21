@@ -1,9 +1,10 @@
 #include <sstream>
 
 #include "../lexer/converters.h"
+#include "access_expression.h"
 #include "basic_block.h"
 #include "classloader.h"
-#include "declaration.h"   // TODO
+#include "declaration.h"
 #include "enhanced_for.h"  // TODO
 #include "expression.h"
 #include "for.h"  // TODO
@@ -29,6 +30,7 @@ parse_decl(semicolon_statement);
 parse_decl(switch_statement);
 parse_decl(case_statement);
 parse_decl(default_statement);
+parse_decl(type_instantiation);
 parse_decl(declaration);
 
 parse_decl(while_statement) {
@@ -379,17 +381,41 @@ parse_decl(statement) {
           out.contexts.push_back(tokens[begin].token_context);
           out.next_token = begin + 1;
           message_builder builder;
-          builder.builder << "Unexpected end of variable declaration!";
+          builder.builder << "Unexpected end of statement!";
           out.messages.push_back(builder.build_message(
               logger::level::FATAL_ERROR, tokens[begin].token_context));
           return out;
         }
-        if (tokens[begin + 1].token_data.token_type !=
-                lexer::token::data::type::OPERATOR_TOKEN ||
-            tokens[begin + 1].token_data.as_operator !=
-                lexer::operators::ACCESS) {
+        output<type_instantiation> maybetype =
+            parse<type_instantiation>(filename, tokens, begin, classes);
+        if (!maybetype.value) {
+          break;
+        }
+        if (maybetype.next_token == tokens.size()) {
+          break;
+        }
+        if (tokens[maybetype.next_token].token_data.token_type ==
+            lexer::token::data::type::DEFERRED_TOKEN) {
           return output<statement>::generalize(
               parse<declaration>(filename, tokens, begin, classes));
+        }
+        if (tokens[maybetype.next_token].token_data.token_type ==
+                lexer::token::data::type::OPERATOR_TOKEN &&
+            tokens[maybetype.next_token].token_data.as_operator ==
+                lexer::operators::ACCESS) {
+          output<access_expression> access =
+              parse<access_expression>(filename, tokens, begin, classes);
+          if (!access.value) {
+            break;
+          }
+          if (access.next_token == tokens.size()) {
+            break;
+          }
+          if (tokens[maybetype.next_token].token_data.token_type ==
+              lexer::token::data::type::DEFERRED_TOKEN) {
+            return output<statement>::generalize(
+                parse<declaration>(filename, tokens, begin, classes));
+          }
         }
       }
       break;
@@ -759,6 +785,7 @@ parse_decl(declaration) {
   out.contexts.push_back(tokens[out.next_token].token_context);
   output<type_instantiation> type =
       parse<type_instantiation>(filename, tokens, out.next_token, classes);
+  std::optional<access_expression> qualified_type;
   std::copy(type.messages.begin(), type.messages.end(),
             std::back_inserter(out.messages));
   out.next_token = type.next_token;
@@ -774,11 +801,28 @@ parse_decl(declaration) {
   }
   if (tokens[out.next_token].token_data.token_type !=
       lexer::token::data::type::DEFERRED_TOKEN) {
-    message_builder builder;
-    builder.builder << "Expected identifier after type in declaration!";
-    out.messages.push_back(builder.build_message(
-        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
-    return out;
+    if (tokens[out.next_token].token_data.token_type ==
+            lexer::token::data::type::OPERATOR_TOKEN &&
+        tokens[out.next_token].token_data.as_operator ==
+            lexer::operators::ACCESS) {
+      output<access_expression> qualified =
+          parse<access_expression>(filename, tokens, out.next_token, classes);
+      std::copy(qualified.messages.begin(), qualified.messages.end(),
+                std::back_inserter(out.messages));
+      out.next_token = qualified.next_token;
+      if (qualified.value && tokens.size() > out.next_token &&
+          tokens[out.next_token].token_data.token_type ==
+              lexer::token::data::type::DEFERRED_TOKEN) {
+        qualified_type = std::move(**qualified.value);
+      }
+    }
+    if (!qualified_type) {
+      message_builder builder;
+      builder.builder << "Expected identifier after type in declaration!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
   }
   std::string name(tokens[out.next_token].token_data.as_deferred.start,
                    tokens[out.next_token].token_data.as_deferred.size);
@@ -813,9 +857,13 @@ parse_decl(declaration) {
     out.value = std::make_unique<declaration>(
         std::move(**type.value), std::move(name),
         std::optional<std::unique_ptr<expression>>{std::move(*expr.value)});
-  } else {
+  } else if (!qualified_type) {
     out.value = std::make_unique<declaration>(
         std::move(**type.value), std::move(name),
+        std::optional<std::unique_ptr<expression>>{});
+  } else {
+    out.value = std::make_unique<declaration>(
+        std::move(*qualified_type), std::move(name),
         std::optional<std::unique_ptr<expression>>{});
   }
   return out;

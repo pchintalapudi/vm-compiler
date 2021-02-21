@@ -694,3 +694,85 @@ parse_decl(unparsed_method_declaration) {
       std::move(arguments), std::move(subtokens));
   return out;
 }
+
+parse_decl(argument) {
+  output<argument> out;
+  out.filename = filename;
+  out.next_token = begin;
+  out.contexts.push_back(tokens[out.next_token].token_context);
+  output<type_instantiation> type =
+      parse<type_instantiation>(filename, tokens, out.next_token, classes);
+  std::optional<access_expression> qualified_type;
+  std::copy(type.messages.begin(), type.messages.end(),
+            std::back_inserter(out.messages));
+  out.next_token = type.next_token;
+  if (!type.value) {
+    return out;
+  }
+  if (out.next_token == tokens.size()) {
+    message_builder builder;
+    builder.builder << "Unexpected end of declaration statement!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  if (tokens[out.next_token].token_data.token_type !=
+      lexer::token::data::type::DEFERRED_TOKEN) {
+    if (tokens[out.next_token].token_data.token_type ==
+            lexer::token::data::type::OPERATOR_TOKEN &&
+        tokens[out.next_token].token_data.as_operator ==
+            lexer::operators::ACCESS) {
+      output<access_expression> qualified =
+          parse<access_expression>(filename, tokens, out.next_token, classes);
+      std::copy(qualified.messages.begin(), qualified.messages.end(),
+                std::back_inserter(out.messages));
+      out.next_token = qualified.next_token;
+      if (qualified.value && tokens.size() > out.next_token &&
+          tokens[out.next_token].token_data.token_type ==
+              lexer::token::data::type::DEFERRED_TOKEN) {
+        qualified_type = std::move(**qualified.value);
+      }
+    }
+    if (!qualified_type) {
+      message_builder builder;
+      builder.builder << "Expected identifier after type in declaration!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+  }
+  std::string name(tokens[out.next_token].token_data.as_deferred.start,
+                   tokens[out.next_token].token_data.as_deferred.size);
+  out.next_token++;
+  std::optional<std::unique_ptr<expression>> default_value;
+  if (tokens.size() > out.next_token &&
+      tokens[out.next_token].token_data.token_type ==
+          lexer::token::data::type::OPERATOR_TOKEN &&
+      tokens[out.next_token].token_data.as_operator == lexer::operators::EQ) {
+    out.next_token++;
+    if (tokens.size() == out.next_token) {
+      message_builder builder;
+      builder.builder << "Unexpected end of argument default value!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    output<expression> expr =
+        parse<expression>(filename, tokens, out.next_token, classes);
+    std::copy(expr.messages.begin(), expr.messages.end(),
+              std::back_inserter(out.messages));
+    out.next_token = expr.next_token;
+    if (!expr.value) {
+      return out;
+    }
+    default_value = std::move(*expr.value);
+  }
+  if (qualified_type) {
+    out.value = std::make_unique<argument>(
+        std::move(*qualified_type), std::move(name), std::move(default_value));
+  } else {
+    out.value = std::make_unique<argument>(
+        std::move(**type.value), std::move(name), std::move(default_value));
+  }
+  return out;
+}

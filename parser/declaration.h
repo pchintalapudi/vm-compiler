@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include "access_expression.h"
 #include "base_classes.h"
 #include "expression.h"
 #include "statement.h"
@@ -11,7 +12,7 @@ namespace oops_compiler {
 namespace parser {
 class declaration : public statement {
  private:
-  type_instantiation type;
+  std::variant<type_instantiation, access_expression> type;
   std::string name;
   std::unique_ptr<expression> expr;
 

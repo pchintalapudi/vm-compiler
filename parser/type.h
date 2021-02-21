@@ -6,7 +6,7 @@
 
 namespace oops_compiler {
 namespace parser {
-class type_instantiation {
+class type_instantiation : public expression {
  private:
   std::string alias;
   std::vector<type_instantiation> instantiations;

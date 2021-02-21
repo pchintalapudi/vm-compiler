@@ -150,8 +150,8 @@ parse_decl(expression) {
           return out;
         }
       }
-    case lexer::token::data::type::LITERAL_TOKEN:
     case lexer::token::data::type::DEFERRED_TOKEN:
+    case lexer::token::data::type::LITERAL_TOKEN:
       return parse_nary_expression(filename, tokens, begin, classes);
   }
 }

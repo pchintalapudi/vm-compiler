@@ -3,6 +3,7 @@
 
 #include <vector>
 
+#include "access_expression.h"
 #include "basic_block.h"
 #include "expression.h"
 #include "modifiers.h"
@@ -13,19 +14,19 @@ namespace parser {
 class class_definition;
 class argument {
  private:
-  type_instantiation type;
+  std::variant<type_instantiation, access_expression> type;
   std::string name;
   std::unique_ptr<expression> default_value;
 
  public:
-  argument(type_instantiation type, std::string name,
+  argument(decltype(type) type, std::string name,
            std::optional<std::unique_ptr<expression>> default_value)
       : type(std::move(type)),
         name(std::move(name)),
         default_value(default_value ? std::move(*default_value)
                                     : std::unique_ptr<expression>{}) {}
 
-  const type_instantiation &get_type() const { return type; }
+  const decltype(type) &get_type() const { return type; }
   const std::string &get_name() const { return name; }
 };
 class method_declaration {
@@ -80,7 +81,8 @@ class method_definition : public method_declaration {
   std::optional<basic_block> body;
 
  public:
-  method_definition(unparsed_method_declaration &&unparsed, std::optional<basic_block> parsed)
+  method_definition(unparsed_method_declaration &&unparsed,
+                    std::optional<basic_block> parsed)
       : method_declaration(std::move(unparsed)), body(std::move(parsed)) {}
   const std::optional<basic_block> &get_method_body() const { return body; }
 };
