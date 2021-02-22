@@ -12,7 +12,7 @@ namespace lexer {
 struct token {
   struct data {
     enum class type {
-      DEFERRED_TOKEN,
+      IDENTIFIER_TOKEN,
       KEYWORD_TOKEN,
       OPERATOR_TOKEN,
       LITERAL_TOKEN
@@ -35,7 +35,7 @@ struct token {
     };
     type token_type;
     union {
-      string as_deferred;
+      string as_identifier;
       literal as_literal;
       operators as_operator;
       keywords as_keyword;

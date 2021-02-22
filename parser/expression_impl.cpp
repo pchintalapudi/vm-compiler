@@ -70,8 +70,8 @@ parse_decl(identifier_expression) {
   out.contexts.push_back(tokens[begin].token_context);
   out.next_token = begin + 1;
   out.value = std::make_unique<identifier_expression>(
-      tokens[begin].token_data.as_deferred.start,
-      tokens[begin].token_data.as_deferred.size);
+      tokens[begin].token_data.as_identifier.start,
+      tokens[begin].token_data.as_identifier.size);
   return out;
 }
 
@@ -150,7 +150,7 @@ parse_decl(expression) {
           return out;
         }
       }
-    case lexer::token::data::type::DEFERRED_TOKEN:
+    case lexer::token::data::type::IDENTIFIER_TOKEN:
     case lexer::token::data::type::LITERAL_TOKEN:
       return parse_nary_expression(filename, tokens, begin, classes);
   }

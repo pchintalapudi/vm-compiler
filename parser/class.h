@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "../logger/logging.h"
+#include "access_expression.h"
 #include "base_classes.h"
 #include "method.h"
 #include "type.h"
@@ -18,39 +19,30 @@ class classloader;
 class class_definition {
  private:
   type_declaration decl;
-  std::vector<const class_definition *> sub_classes, interfaces;
-  const class_definition *super;
+  std::vector<class_definition> sub_classes;
+  std::optional<general_type> super;
+  std::vector<general_type> interfaces;
   std::vector<std::unique_ptr<variable>> vars;
   std::vector<std::unique_ptr<method_declaration>> mtds;
 
  public:
   class_definition(type_declaration decl,
-                   std::vector<const class_definition *> sub_classes,
-                   std::vector<const class_definition *> interfaces,
-                   const class_definition &super,
-                   std::vector<std::unique_ptr<variable>> vars,
-                   std::vector<std::unique_ptr<method_declaration>> mtds)
+                   std::vector<class_definition> sub_classes,
+                   decltype(interfaces) interfaces, decltype(super) super,
+                   decltype(vars) vars, decltype(mtds) mtds)
       : decl(std::move(decl)),
         sub_classes(std::move(sub_classes)),
+        super(std::move(super)),
         interfaces(std::move(interfaces)),
-        super(&super),
         vars(std::move(vars)),
         mtds(std::move(mtds)) {}
-  const std::vector<const class_definition *> &inner_classes() const {
-    return sub_classes;
-  }
-  std::optional<const class_definition *> superclass() const {
-    return super ? std::optional{super} : std::optional<decltype(super)>{};
-  }
-  const std::vector<const class_definition *> &implemented_interfaces() const {
+  const decltype(sub_classes) &inner_classes() const { return sub_classes; }
+  const decltype(super) &superclass() const { return super; }
+  const decltype(interfaces) &implemented_interfaces() const {
     return interfaces;
   }
-  const std::vector<std::unique_ptr<variable>> &variables() const {
-    return vars;
-  }
-  const std::vector<std::unique_ptr<method_declaration>> &methods() const {
-    return mtds;
-  }
+  const decltype(vars) &variables() const { return vars; }
+  const decltype(mtds) &methods() const { return mtds; }
   virtual ~class_definition() = default;
 };
 }  // namespace parser

@@ -17,9 +17,9 @@ std::string token::to_string() const {
         builder << "\"type\": " << "\"keyword\"" << ",";
         builder << "\"data\": \"" << all_mappings.keywords_to_strings[static_cast<unsigned>(this->token_data.as_keyword)] << "\"";
         break;
-        case token::data::type::DEFERRED_TOKEN:
-        builder << "\"type\": " << "\"deferred\"" << ",";
-        builder << "\"data\": \"" << std::string(token_data.as_deferred.start, token_data.as_deferred.size) << "\"";
+        case token::data::type::IDENTIFIER_TOKEN:
+        builder << "\"type\": " << "\"identifier\"" << ",";
+        builder << "\"data\": \"" << std::string(token_data.as_identifier.start, token_data.as_identifier.size) << "\"";
         break;
         case token::data::type::LITERAL_TOKEN:
         builder << "\"type\": " << "\"literal\"" << ",";

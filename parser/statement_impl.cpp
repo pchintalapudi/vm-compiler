@@ -32,6 +32,7 @@ parse_decl(case_statement);
 parse_decl(default_statement);
 parse_decl(type_instantiation);
 parse_decl(declaration);
+parse_decl(general_type);
 
 parse_decl(while_statement) {
   output<while_statement> out;
@@ -371,9 +372,9 @@ parse_decl(statement) {
       }
       break;
     }
-    case lexer::token::data::type::DEFERRED_TOKEN: {
-      auto str = std::string(tokens[begin].token_data.as_deferred.start,
-                             tokens[begin].token_data.as_deferred.size);
+    case lexer::token::data::type::IDENTIFIER_TOKEN: {
+      auto str = std::string(tokens[begin].token_data.as_identifier.start,
+                             tokens[begin].token_data.as_identifier.size);
       if (classes.find(str) != classes.end()) {
         if (tokens.size() - begin == 1) {
           output<statement> out;
@@ -386,37 +387,20 @@ parse_decl(statement) {
               logger::level::FATAL_ERROR, tokens[begin].token_context));
           return out;
         }
-        output<type_instantiation> maybetype =
-            parse<type_instantiation>(filename, tokens, begin, classes);
+        output<general_type> maybetype =
+            parse<general_type>(filename, tokens, begin, classes);
         if (!maybetype.value) {
           break;
         }
         if (maybetype.next_token == tokens.size()) {
           break;
         }
-        if (tokens[maybetype.next_token].token_data.token_type ==
-            lexer::token::data::type::DEFERRED_TOKEN) {
-          return output<statement>::generalize(
-              parse<declaration>(filename, tokens, begin, classes));
+        if (tokens[maybetype.next_token].token_data.token_type !=
+            lexer::token::data::type::IDENTIFIER_TOKEN) {
+          break;
         }
-        if (tokens[maybetype.next_token].token_data.token_type ==
-                lexer::token::data::type::OPERATOR_TOKEN &&
-            tokens[maybetype.next_token].token_data.as_operator ==
-                lexer::operators::ACCESS) {
-          output<access_expression> access =
-              parse<access_expression>(filename, tokens, begin, classes);
-          if (!access.value) {
-            break;
-          }
-          if (access.next_token == tokens.size()) {
-            break;
-          }
-          if (tokens[maybetype.next_token].token_data.token_type ==
-              lexer::token::data::type::DEFERRED_TOKEN) {
-            return output<statement>::generalize(
-                parse<declaration>(filename, tokens, begin, classes));
-          }
-        }
+        return output<statement>::generalize(
+            parse<declaration>(filename, tokens, begin, classes));
       }
       break;
     }
@@ -629,8 +613,8 @@ parse_decl(type_instantiation) {
   out.filename = filename;
   out.next_token = begin;
   out.contexts.push_back(tokens[out.next_token].token_context);
-  std::string alias(tokens[out.next_token].token_data.as_deferred.start,
-                    tokens[out.next_token].token_data.as_deferred.size);
+  std::string alias(tokens[out.next_token].token_data.as_identifier.start,
+                    tokens[out.next_token].token_data.as_identifier.size);
   out.next_token++;
   if (out.next_token == tokens.size() ||
       (tokens[out.next_token].token_data.token_type !=
@@ -651,9 +635,9 @@ parse_decl(type_instantiation) {
       arraytype = true;
     }
     out.value = std::make_unique<type_instantiation>(
-        std::move(alias), std::vector<type_instantiation>{}, arraytype);
+        std::move(alias), std::vector<general_type>{}, arraytype);
   } else {
-    std::vector<type_instantiation> subtypes;
+    std::vector<general_type> subtypes;
     do {
       out.next_token++;
       if (tokens.size() == out.next_token) {
@@ -663,8 +647,8 @@ parse_decl(type_instantiation) {
             logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
         return out;
       }
-      output<type_instantiation> subtype =
-          parse<type_instantiation>(filename, tokens, out.next_token, classes);
+      output<general_type> subtype =
+          parse<general_type>(filename, tokens, out.next_token, classes);
       std::copy(subtype.messages.begin(), subtype.messages.end(),
                 std::back_inserter(out.messages));
       out.next_token = subtype.next_token;
@@ -783,9 +767,8 @@ parse_decl(declaration) {
   out.filename = filename;
   out.next_token = begin;
   out.contexts.push_back(tokens[out.next_token].token_context);
-  output<type_instantiation> type =
-      parse<type_instantiation>(filename, tokens, out.next_token, classes);
-  std::optional<access_expression> qualified_type;
+  output<general_type> type =
+      parse<general_type>(filename, tokens, out.next_token, classes);
   std::copy(type.messages.begin(), type.messages.end(),
             std::back_inserter(out.messages));
   out.next_token = type.next_token;
@@ -800,32 +783,15 @@ parse_decl(declaration) {
     return out;
   }
   if (tokens[out.next_token].token_data.token_type !=
-      lexer::token::data::type::DEFERRED_TOKEN) {
-    if (tokens[out.next_token].token_data.token_type ==
-            lexer::token::data::type::OPERATOR_TOKEN &&
-        tokens[out.next_token].token_data.as_operator ==
-            lexer::operators::ACCESS) {
-      output<access_expression> qualified =
-          parse<access_expression>(filename, tokens, out.next_token, classes);
-      std::copy(qualified.messages.begin(), qualified.messages.end(),
-                std::back_inserter(out.messages));
-      out.next_token = qualified.next_token;
-      if (qualified.value && tokens.size() > out.next_token &&
-          tokens[out.next_token].token_data.token_type ==
-              lexer::token::data::type::DEFERRED_TOKEN) {
-        qualified_type = std::move(**qualified.value);
-      }
-    }
-    if (!qualified_type) {
-      message_builder builder;
-      builder.builder << "Expected identifier after type in declaration!";
-      out.messages.push_back(builder.build_message(
-          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
-      return out;
-    }
+      lexer::token::data::type::IDENTIFIER_TOKEN) {
+    message_builder builder;
+    builder.builder << "Expected variable name to be an identifier!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
   }
-  std::string name(tokens[out.next_token].token_data.as_deferred.start,
-                   tokens[out.next_token].token_data.as_deferred.size);
+  std::string name(tokens[out.next_token].token_data.as_identifier.start,
+                   tokens[out.next_token].token_data.as_identifier.size);
   if (out.next_token == tokens.size()) {
     message_builder builder;
     builder.builder << "Unexpected end of declaration statement!";
@@ -857,14 +823,42 @@ parse_decl(declaration) {
     out.value = std::make_unique<declaration>(
         std::move(**type.value), std::move(name),
         std::optional<std::unique_ptr<expression>>{std::move(*expr.value)});
-  } else if (!qualified_type) {
+  } else {
     out.value = std::make_unique<declaration>(
         std::move(**type.value), std::move(name),
         std::optional<std::unique_ptr<expression>>{});
-  } else {
-    out.value = std::make_unique<declaration>(
-        std::move(*qualified_type), std::move(name),
-        std::optional<std::unique_ptr<expression>>{});
   }
+  return out;
+}
+
+parse_decl(general_type) {
+  output<general_type> out;
+  out.filename = filename;
+  out.next_token = begin;
+  out.contexts.push_back(tokens[out.next_token].token_context);
+  output<type_instantiation> type =
+      parse<type_instantiation>(filename, tokens, out.next_token, classes);
+  std::copy(type.messages.begin(), type.messages.end(),
+            std::back_inserter(out.messages));
+  out.next_token = type.next_token;
+  if (!type.value) {
+    return out;
+  }
+  if (tokens.size() > out.next_token &&
+      tokens[out.next_token].token_data.token_type ==
+          lexer::token::data::type::OPERATOR_TOKEN &&
+      tokens[out.next_token].token_data.as_operator ==
+          lexer::operators::ACCESS) {
+    output<access_expression> access =
+        parse<access_expression>(filename, tokens, begin, classes);
+    if (access.value) {
+      std::copy(access.messages.begin(), access.messages.end(),
+                std::back_inserter(out.messages));
+      out.next_token = access.next_token;
+      out.value = std::make_unique<general_type>(std::move(**access.value));
+      return out;
+    }
+  }
+  out.value = std::make_unique<general_type>(std::move(**type.value));
   return out;
 }

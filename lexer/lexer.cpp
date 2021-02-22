@@ -117,7 +117,7 @@ struct lexer_variables {
   const char *end;
   oops_compiler::logger::context context;
   message_builder builder;
-  oops_compiler::lexer::token deferred_token;
+  oops_compiler::lexer::token identifier_token;
   void build_message(oops_compiler::logger::level level) {
     out->messages.push_back(oops_compiler::logger::message{
         .text = builder.get_message(),
@@ -127,20 +127,20 @@ struct lexer_variables {
   }
   void set_as_integer_token() {
     int radix = 10;
-    std::cout << "INTEGER " << deferred_token.token_data.as_deferred.size
+    std::cout << "INTEGER " << identifier_token.token_data.as_identifier.size
               << " \""
-              << std::string(deferred_token.token_data.as_deferred.start,
-                             deferred_token.token_data.as_deferred.size)
+              << std::string(identifier_token.token_data.as_identifier.start,
+                             identifier_token.token_data.as_identifier.size)
               << "\""
               << "\n";
-    if (deferred_token.token_data.as_deferred.start[0] == '0') {
-      switch (deferred_token.token_data.as_deferred.size) {
+    if (identifier_token.token_data.as_identifier.start[0] == '0') {
+      switch (identifier_token.token_data.as_identifier.size) {
         case 1:
-          deferred_token.token_data.token_type =
+          identifier_token.token_data.token_type =
               token::data::type::LITERAL_TOKEN;
-          deferred_token.token_data.as_literal.literal_type =
+          identifier_token.token_data.as_literal.literal_type =
               token::data::literal::type::INTEGER;
-          deferred_token.token_data.as_literal.as_integer = 0;
+          identifier_token.token_data.as_literal.as_integer = 0;
           return;
         case 2:
           builder.builder << "Integer literals may not begin with 0, except "
@@ -149,7 +149,7 @@ struct lexer_variables {
           build_message(oops_compiler::logger::level::ERROR);
           return;
         default:
-          switch (deferred_token.token_data.as_deferred.start[1]) {
+          switch (identifier_token.token_data.as_identifier.start[1]) {
             case 'b':
             case 'B':
               radix = 2;
@@ -175,19 +175,19 @@ struct lexer_variables {
     }
     std::variant<std::int64_t, std::string> maybe;
     if (radix != 10) {
-      deferred_token.token_data.as_deferred.start += 2;
-      maybe = parse_int(deferred_token.token_data.as_deferred.start,
-                        deferred_token.token_data.as_deferred.size - 2, radix);
-      deferred_token.token_data.as_deferred.start -= 2;
+      identifier_token.token_data.as_identifier.start += 2;
+      maybe = parse_int(identifier_token.token_data.as_identifier.start,
+                        identifier_token.token_data.as_identifier.size - 2, radix);
+      identifier_token.token_data.as_identifier.start -= 2;
     } else {
-      maybe = parse_int(deferred_token.token_data.as_deferred.start,
-                        deferred_token.token_data.as_deferred.size, radix);
+      maybe = parse_int(identifier_token.token_data.as_identifier.start,
+                        identifier_token.token_data.as_identifier.size, radix);
     }
     if (std::holds_alternative<std::int64_t>(maybe)) {
-      deferred_token.token_data.token_type = token::data::type::LITERAL_TOKEN;
-      deferred_token.token_data.as_literal.literal_type =
+      identifier_token.token_data.token_type = token::data::type::LITERAL_TOKEN;
+      identifier_token.token_data.as_literal.literal_type =
           token::data::literal::type::INTEGER;
-      deferred_token.token_data.as_literal.as_integer =
+      identifier_token.token_data.as_literal.as_integer =
           std::get<std::int64_t>(maybe);
     } else {
       builder.builder << std::get<std::string>(maybe);
@@ -195,22 +195,22 @@ struct lexer_variables {
     }
   }
   void token_to_number() {
-    switch (deferred_token.token_data.as_deferred
-                .start[deferred_token.token_data.as_deferred.size - 1]) {
+    switch (identifier_token.token_data.as_identifier
+                .start[identifier_token.token_data.as_identifier.size - 1]) {
       case 'f':
       case 'F': {
-        if (deferred_token.token_data.as_deferred.size < 3 ||
-            deferred_token.token_data.as_deferred.start[0] != '0' ||
-            (deferred_token.token_data.as_deferred.start[1] != 'x' &&
-             deferred_token.token_data.as_deferred.start[1] != 'X')) {
-          auto maybe = parse_float(deferred_token.token_data.as_deferred.start,
-                                   deferred_token.token_data.as_deferred.size);
+        if (identifier_token.token_data.as_identifier.size < 3 ||
+            identifier_token.token_data.as_identifier.start[0] != '0' ||
+            (identifier_token.token_data.as_identifier.start[1] != 'x' &&
+             identifier_token.token_data.as_identifier.start[1] != 'X')) {
+          auto maybe = parse_float(identifier_token.token_data.as_identifier.start,
+                                   identifier_token.token_data.as_identifier.size);
           if (std::holds_alternative<float>(maybe)) {
-            deferred_token.token_data.token_type =
+            identifier_token.token_data.token_type =
                 token::data::type::LITERAL_TOKEN;
-            deferred_token.token_data.as_literal.literal_type =
+            identifier_token.token_data.as_literal.literal_type =
                 token::data::literal::type::FLOAT;
-            deferred_token.token_data.as_literal.as_float =
+            identifier_token.token_data.as_literal.as_float =
                 std::get<float>(maybe);
           } else {
             builder.builder << std::get<std::string>(maybe);
@@ -223,24 +223,24 @@ struct lexer_variables {
       }
       case 'i':
       case 'I': {
-        deferred_token.token_data.as_deferred.size--;
+        identifier_token.token_data.as_identifier.size--;
         set_as_integer_token();
         break;
       }
       case 'd':
       case 'D': {
-        if (deferred_token.token_data.as_deferred.size < 3 ||
-            deferred_token.token_data.as_deferred.start[0] != '0' ||
-            (deferred_token.token_data.as_deferred.start[1] != 'x' &&
-             deferred_token.token_data.as_deferred.start[1] != 'X')) {
-          auto maybe = parse_double(deferred_token.token_data.as_deferred.start,
-                                    deferred_token.token_data.as_deferred.size);
+        if (identifier_token.token_data.as_identifier.size < 3 ||
+            identifier_token.token_data.as_identifier.start[0] != '0' ||
+            (identifier_token.token_data.as_identifier.start[1] != 'x' &&
+             identifier_token.token_data.as_identifier.start[1] != 'X')) {
+          auto maybe = parse_double(identifier_token.token_data.as_identifier.start,
+                                    identifier_token.token_data.as_identifier.size);
           if (std::holds_alternative<double>(maybe)) {
-            deferred_token.token_data.token_type =
+            identifier_token.token_data.token_type =
                 token::data::type::LITERAL_TOKEN;
-            deferred_token.token_data.as_literal.literal_type =
+            identifier_token.token_data.as_literal.literal_type =
                 token::data::literal::type::DOUBLE;
-            deferred_token.token_data.as_literal.as_double =
+            identifier_token.token_data.as_literal.as_double =
                 std::get<double>(maybe);
           } else {
             builder.builder << std::get<std::string>(maybe);
@@ -252,27 +252,27 @@ struct lexer_variables {
         break;
       }
       default:
-        if (deferred_token.token_data.as_deferred.size > 2 &&
-            deferred_token.token_data.as_deferred.start[0] == '0' &&
-            (deferred_token.token_data.as_deferred.start[1] == 'x' ||
-             deferred_token.token_data.as_deferred.start[1] == 'X')) {
+        if (identifier_token.token_data.as_identifier.size > 2 &&
+            identifier_token.token_data.as_identifier.start[0] == '0' &&
+            (identifier_token.token_data.as_identifier.start[1] == 'x' ||
+             identifier_token.token_data.as_identifier.start[1] == 'X')) {
           set_as_integer_token();
           break;
         }
-        for (std::int64_t i = 1; i < deferred_token.token_data.as_deferred.size;
+        for (std::int64_t i = 1; i < identifier_token.token_data.as_identifier.size;
              i++) {
-          if (deferred_token.token_data.as_deferred.start[i] == 'e' ||
-              deferred_token.token_data.as_deferred.start[i] == 'E' ||
-              deferred_token.token_data.as_deferred.start[i] == '.') {
+          if (identifier_token.token_data.as_identifier.start[i] == 'e' ||
+              identifier_token.token_data.as_identifier.start[i] == 'E' ||
+              identifier_token.token_data.as_identifier.start[i] == '.') {
             auto maybe =
-                parse_double(deferred_token.token_data.as_deferred.start,
-                             deferred_token.token_data.as_deferred.size);
+                parse_double(identifier_token.token_data.as_identifier.start,
+                             identifier_token.token_data.as_identifier.size);
             if (std::holds_alternative<double>(maybe)) {
-              deferred_token.token_data.token_type =
+              identifier_token.token_data.token_type =
                   token::data::type::LITERAL_TOKEN;
-              deferred_token.token_data.as_literal.literal_type =
+              identifier_token.token_data.as_literal.literal_type =
                   token::data::literal::type::DOUBLE;
-              deferred_token.token_data.as_literal.as_double =
+              identifier_token.token_data.as_literal.as_double =
                   std::get<double>(maybe);
             } else {
               builder.builder << std::get<std::string>(maybe);
@@ -286,37 +286,37 @@ struct lexer_variables {
     }
   }
   void flush_token() {
-    if (deferred_token.token_context.global_char_number > -1) {
-      if (isdigit(deferred_token.token_data.as_deferred.start[0])) {
+    if (identifier_token.token_context.global_char_number > -1) {
+      if (isdigit(identifier_token.token_data.as_identifier.start[0])) {
         token_to_number();
       } else if (auto it = all_mappings.string_to_keywords.find(
-                     std::string(deferred_token.token_data.as_deferred.start,
-                                 deferred_token.token_data.as_deferred.size));
+                     std::string(identifier_token.token_data.as_identifier.start,
+                                 identifier_token.token_data.as_identifier.size));
                  it != all_mappings.string_to_keywords.end()) {
-        deferred_token.token_data.token_type = token::data::type::KEYWORD_TOKEN;
-        deferred_token.token_data.as_keyword = it->second;
+        identifier_token.token_data.token_type = token::data::type::KEYWORD_TOKEN;
+        identifier_token.token_data.as_keyword = it->second;
       }
-      out->output.push_back(deferred_token);
-      std::cout << deferred_token.to_string() << std::endl;
-      deferred_token.token_data.token_type = token::data::type::DEFERRED_TOKEN;
-      deferred_token.token_context.global_char_number = -1;
+      out->output.push_back(identifier_token);
+      std::cout << identifier_token.to_string() << std::endl;
+      identifier_token.token_data.token_type = token::data::type::IDENTIFIER_TOKEN;
+      identifier_token.token_context.global_char_number = -1;
     }
   }
   void extend_token() {
-    if (deferred_token.token_context.global_char_number == -1) {
-      deferred_token.token_context = context;
-      deferred_token.token_data.as_deferred.size = 0;
-      deferred_token.token_data.as_deferred.start =
+    if (identifier_token.token_context.global_char_number == -1) {
+      identifier_token.token_context = context;
+      identifier_token.token_data.as_identifier.size = 0;
+      identifier_token.token_data.as_identifier.start =
           start + context.global_char_number - 1;
     }
-    deferred_token.token_data.as_deferred.size++;
+    identifier_token.token_data.as_identifier.size++;
   }
 };
 
 lexer_variables init_lexer_values(oops_compiler::lexer::lexed_output *output) {
   lexer_variables out{};
   out.out = output;
-  out.deferred_token.token_context.global_char_number = -1;
+  out.identifier_token.token_context.global_char_number = -1;
   return out;
 }
 }  // namespace
@@ -339,8 +339,8 @@ lexed_output lexer::lex() {
             variables.start + variables.context.global_char_number,
             variables.end, &this->root)) {
       if (op->second == operators::ACCESS &&
-          variables.deferred_token.token_context.global_char_number > -1 &&
-          isdigit(variables.deferred_token.token_data.as_deferred.start[0])) {
+          variables.identifier_token.token_context.global_char_number > -1 &&
+          isdigit(variables.identifier_token.token_data.as_identifier.start[0])) {
         variables.context.global_char_number++;
         variables.context.char_number++;
         variables.extend_token();

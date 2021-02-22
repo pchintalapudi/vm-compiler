@@ -14,7 +14,7 @@ namespace parser {
 class class_definition;
 class argument {
  private:
-  std::variant<type_instantiation, access_expression> type;
+  general_type type;
   std::string name;
   std::unique_ptr<expression> default_value;
 
@@ -39,12 +39,12 @@ class method_declaration {
   storage store;
   special spec;
   bool fin;
-  type_instantiation ret;
+  general_type ret;
   std::vector<argument> parameters;
 
  public:
   method_declaration(type_declaration decl, modifiers mods, storage store,
-                     special spec, bool fin, type_instantiation ret,
+                     special spec, bool fin, general_type ret,
                      decltype(method_declaration::parameters) parameters)
       : decl(std::move(decl)),
         mods(mods),
@@ -58,7 +58,7 @@ class method_declaration {
   storage get_storage() const { return store; }
   special get_special() const { return spec; }
   bool is_final() const { return fin; }
-  const type_instantiation &get_return_type() const { return ret; }
+  const general_type &get_return_type() const { return ret; }
   const decltype(parameters) &get_parameters() const { return parameters; }
 };
 class unparsed_method_declaration : public method_declaration {
@@ -68,7 +68,7 @@ class unparsed_method_declaration : public method_declaration {
  public:
   unparsed_method_declaration(type_declaration decl, modifiers mods,
                               storage store, special spec, bool fin,
-                              type_instantiation ret,
+                              general_type ret,
                               std::vector<argument> parameters,
                               std::vector<lexer::token> tokens)
       : method_declaration(std::move(decl), mods, store, spec, fin,

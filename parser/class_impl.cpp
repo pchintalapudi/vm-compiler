@@ -11,6 +11,9 @@ parse_decl(class_definition);
 parse_decl(unparsed_method_declaration);
 parse_decl(variable);
 parse_decl(source_file);
+parse_decl(argument);
+parse_decl(type_declaration);
+parse_decl(generic_declaration);
 
 parse_decl(variable) {
   output<variable> out;
@@ -90,7 +93,7 @@ parse_decl(package_declaration) {
       return out;
     }
     if (tokens[begin].token_data.token_type !=
-        lexer::token::data::type::DEFERRED_TOKEN) {
+        lexer::token::data::type::IDENTIFIER_TOKEN) {
       message_builder builder;
       builder.builder << "Package folders must not be strings, numbers, "
                          "operators, or keywords!";
@@ -99,8 +102,9 @@ parse_decl(package_declaration) {
       begin--;
       break;
     }
-    package->push_back(std::string(tokens[begin].token_data.as_deferred.start,
-                                   tokens[begin].token_data.as_deferred.size));
+    package->push_back(
+        std::string(tokens[begin].token_data.as_identifier.start,
+                    tokens[begin].token_data.as_identifier.size));
     begin++;
     if (tokens.size() == begin) {
       message_builder builder;
@@ -145,7 +149,7 @@ parse_decl(imported_class) {
       return out;
     }
     if (tokens[begin].token_data.token_type !=
-        lexer::token::data::type::DEFERRED_TOKEN) {
+        lexer::token::data::type::IDENTIFIER_TOKEN) {
       message_builder builder;
       builder.builder << "import folders must not be strings, numbers, "
                          "operators, or keywords!";
@@ -154,8 +158,8 @@ parse_decl(imported_class) {
       begin--;
       break;
     }
-    package.push_back(std::string(tokens[begin].token_data.as_deferred.start,
-                                  tokens[begin].token_data.as_deferred.size));
+    package.push_back(std::string(tokens[begin].token_data.as_identifier.start,
+                                  tokens[begin].token_data.as_identifier.size));
     begin++;
     if (tokens.size() == begin) {
       message_builder builder;
@@ -206,14 +210,14 @@ parse_decl(imported_class) {
       return out;
     }
     if (tokens[begin].token_data.token_type !=
-        lexer::token::data::type::DEFERRED_TOKEN) {
+        lexer::token::data::type::IDENTIFIER_TOKEN) {
       message_builder builder;
       builder.builder << "Expected import alias to be an identifier!";
       out.messages.push_back(builder.build_message(
           logger::level::ERROR, tokens[begin].token_context));
     } else {
-      alias = std::string(tokens[begin].token_data.as_deferred.start,
-                          tokens[begin].token_data.as_deferred.size);
+      alias = std::string(tokens[begin].token_data.as_identifier.start,
+                          tokens[begin].token_data.as_identifier.size);
       begin++;
       out.next_token = begin;
     }
@@ -317,15 +321,15 @@ parse_decl(source_file) {
     return out;
   }
   if (tokens[begin + 1].token_data.token_type !=
-      lexer::token::data::type::DEFERRED_TOKEN) {
+      lexer::token::data::type::IDENTIFIER_TOKEN) {
     message_builder builder;
     builder.builder << "Class name must be an identifier!";
     out.messages.push_back(builder.build_message(logger::level::FATAL_ERROR,
                                                  tokens[begin].token_context));
     return out;
   }
-  classes.emplace(tokens[begin + 1].token_data.as_deferred.start,
-                  tokens[begin + 1].token_data.as_deferred.size);
+  classes.emplace(tokens[begin + 1].token_data.as_identifier.start,
+                  tokens[begin + 1].token_data.as_identifier.size);
   auto cls = parse<class_definition>(filename, tokens, begin, classes);
   std::copy(cls.messages.begin(), cls.messages.end(),
             std::back_inserter(out.messages));
@@ -494,7 +498,7 @@ parse_decl(unparsed_method_declaration) {
     return out;
   }
   if (tokens[out.next_token].token_data.token_type !=
-      lexer::token::data::type::DEFERRED_TOKEN) {
+      lexer::token::data::type::IDENTIFIER_TOKEN) {
     message_builder builder;
     builder.builder << "Expected an identifier for method name!";
     out.messages.push_back(builder.build_message(
@@ -551,7 +555,7 @@ parse_decl(unparsed_method_declaration) {
       return out;
     }
     if (tokens[out.next_token].token_data.token_type !=
-        lexer::token::data::type::DEFERRED_TOKEN) {
+        lexer::token::data::type::IDENTIFIER_TOKEN) {
       message_builder builder;
       builder.builder << "Method argument must begin with an identifier!";
       out.messages.push_back(builder.build_message(
@@ -603,7 +607,7 @@ parse_decl(unparsed_method_declaration) {
         logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
     return out;
   }
-  type_instantiation ret{"void", {}, false};
+  general_type ret{type_instantiation("void", {}, false)};
   if (mtype != method_declaration::type::CONSTRUCTOR) {
     if (tokens[out.next_token].token_data.token_type !=
             lexer::token::data::type::OPERATOR_TOKEN ||
@@ -625,15 +629,15 @@ parse_decl(unparsed_method_declaration) {
       return out;
     }
     if (tokens[out.next_token].token_data.token_type !=
-        lexer::token::data::type::DEFERRED_TOKEN) {
+        lexer::token::data::type::IDENTIFIER_TOKEN) {
       message_builder builder;
       builder.builder << "Return type must begin with an identifier!";
       out.messages.push_back(builder.build_message(
           logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
       return out;
     }
-    output<type_instantiation> rettype =
-        parse<type_instantiation>(filename, tokens, begin, classes);
+    output<general_type> rettype =
+        parse<general_type>(filename, tokens, begin, classes);
     std::copy(rettype.messages.begin(), rettype.messages.end(),
               std::back_inserter(out.messages));
     out.next_token = rettype.next_token;
@@ -700,9 +704,8 @@ parse_decl(argument) {
   out.filename = filename;
   out.next_token = begin;
   out.contexts.push_back(tokens[out.next_token].token_context);
-  output<type_instantiation> type =
-      parse<type_instantiation>(filename, tokens, out.next_token, classes);
-  std::optional<access_expression> qualified_type;
+  output<general_type> type =
+      parse<general_type>(filename, tokens, out.next_token, classes);
   std::copy(type.messages.begin(), type.messages.end(),
             std::back_inserter(out.messages));
   out.next_token = type.next_token;
@@ -711,38 +714,13 @@ parse_decl(argument) {
   }
   if (out.next_token == tokens.size()) {
     message_builder builder;
-    builder.builder << "Unexpected end of declaration statement!";
+    builder.builder << "Unexpected end of argument declaration!";
     out.messages.push_back(builder.build_message(
         logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
     return out;
   }
-  if (tokens[out.next_token].token_data.token_type !=
-      lexer::token::data::type::DEFERRED_TOKEN) {
-    if (tokens[out.next_token].token_data.token_type ==
-            lexer::token::data::type::OPERATOR_TOKEN &&
-        tokens[out.next_token].token_data.as_operator ==
-            lexer::operators::ACCESS) {
-      output<access_expression> qualified =
-          parse<access_expression>(filename, tokens, out.next_token, classes);
-      std::copy(qualified.messages.begin(), qualified.messages.end(),
-                std::back_inserter(out.messages));
-      out.next_token = qualified.next_token;
-      if (qualified.value && tokens.size() > out.next_token &&
-          tokens[out.next_token].token_data.token_type ==
-              lexer::token::data::type::DEFERRED_TOKEN) {
-        qualified_type = std::move(**qualified.value);
-      }
-    }
-    if (!qualified_type) {
-      message_builder builder;
-      builder.builder << "Expected identifier after type in declaration!";
-      out.messages.push_back(builder.build_message(
-          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
-      return out;
-    }
-  }
-  std::string name(tokens[out.next_token].token_data.as_deferred.start,
-                   tokens[out.next_token].token_data.as_deferred.size);
+  std::string name(tokens[out.next_token].token_data.as_identifier.start,
+                   tokens[out.next_token].token_data.as_identifier.size);
   out.next_token++;
   std::optional<std::unique_ptr<expression>> default_value;
   if (tokens.size() > out.next_token &&
@@ -767,12 +745,167 @@ parse_decl(argument) {
     }
     default_value = std::move(*expr.value);
   }
-  if (qualified_type) {
-    out.value = std::make_unique<argument>(
-        std::move(*qualified_type), std::move(name), std::move(default_value));
-  } else {
-    out.value = std::make_unique<argument>(
-        std::move(**type.value), std::move(name), std::move(default_value));
+  out.value = std::make_unique<argument>(
+      std::move(**type.value), std::move(name), std::move(default_value));
+  return out;
+}
+
+parse_decl(type_declaration) {
+  output<type_declaration> out;
+  out.filename = filename;
+  out.next_token = begin;
+  out.contexts.push_back(tokens[out.next_token].token_context);
+  std::string name(tokens[out.next_token].token_data.as_identifier.start,
+                   tokens[out.next_token].token_data.as_identifier.size);
+  out.next_token++;
+  if (out.next_token == tokens.size() ||
+      tokens[out.next_token].token_data.token_type !=
+          lexer::token::data::type::OPERATOR_TOKEN ||
+      tokens[out.next_token].token_data.as_operator != lexer::operators::LESS) {
+    out.value = std::make_unique<type_declaration>(
+        std::move(name), std::vector<generic_declaration>{});
+    return out;
   }
+  std::vector<generic_declaration> generics;
+  do {
+    out.next_token++;
+    if (out.next_token == tokens.size()) {
+      message_builder builder;
+      builder.builder << "Unexpected end of type declaration!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    if (tokens[out.next_token].token_data.token_type !=
+        lexer::token::data::type::IDENTIFIER_TOKEN) {
+      message_builder builder;
+      builder.builder << "Generic declaration must begin with an identifier!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    output<generic_declaration> generic =
+        parse<generic_declaration>(filename, tokens, out.next_token, classes);
+    std::copy(generic.messages.begin(), generic.messages.end(),
+              std::back_inserter(out.messages));
+    out.next_token = generic.next_token;
+    if (!generic.value) {
+      return out;
+    }
+    if (out.next_token == tokens.size()) {
+      message_builder builder;
+      builder.builder << "Unexpected end of type declaration!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    if (tokens[out.next_token].token_data.token_type !=
+            lexer::token::data::type::OPERATOR_TOKEN ||
+        (tokens[out.next_token].token_data.as_operator !=
+             lexer::operators::COMMA &&
+         tokens[out.next_token].token_data.as_operator !=
+             lexer::operators::GREATER)) {
+      message_builder builder;
+      builder.builder << "Generic declaration must be separated by commas and "
+                         "end in a right angle bracket!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+  } while (tokens[out.next_token].token_data.as_operator !=
+           lexer::operators::GREATER);
+  out.next_token++;
+  out.value =
+      std::make_unique<type_declaration>(std::move(name), std::move(generics));
+  return out;
+}
+
+parse_decl(generic_declaration) {
+  output<generic_declaration> out;
+  out.filename = filename;
+  out.next_token = begin;
+  out.contexts.push_back(tokens[out.next_token].token_context);
+  std::string name(tokens[out.next_token].token_data.as_identifier.start,
+                   tokens[out.next_token].token_data.as_identifier.size);
+  std::vector<std::pair<generic_declaration::bound, general_type>> bounds;
+  do {
+    out.next_token++;
+    if (tokens.size() == out.next_token) {
+      out.value = std::make_unique<generic_declaration>(std::move(name),
+                                                        std::move(bounds));
+      return out;
+    }
+    generic_declaration::bound bound;
+    switch (tokens[out.next_token].token_data.token_type) {
+      case lexer::token::data::type::KEYWORD_TOKEN:
+        if (tokens[out.next_token].token_data.as_keyword ==
+            lexer::keywords::EXTENDS) {
+          bound = generic_declaration::bound::EXTENDS;
+          break;
+        } else {
+          out.value = std::make_unique<generic_declaration>(std::move(name),
+                                                            std::move(bounds));
+          return out;
+        }
+      case lexer::token::data::type::IDENTIFIER_TOKEN: {
+        std::string token(tokens[out.next_token].token_data.as_identifier.start,
+                          tokens[out.next_token].token_data.as_identifier.size);
+        if (token == "super") {
+          bound = generic_declaration::bound::SUPER;
+          break;
+        } else {
+          out.value = std::make_unique<generic_declaration>(std::move(name),
+                                                            std::move(bounds));
+          return out;
+        }
+      }
+      case lexer::token::data::type::OPERATOR_TOKEN:
+      case lexer::token::data::type::LITERAL_TOKEN:
+        out.value = std::make_unique<generic_declaration>(std::move(name),
+                                                          std::move(bounds));
+        return out;
+    }
+    out.next_token++;
+    if (out.next_token == tokens.size()) {
+      message_builder builder;
+      builder.builder << "Unexpected end of generic declaration!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    if (tokens[out.next_token].token_data.token_type !=
+        lexer::token::data::type::IDENTIFIER_TOKEN) {
+      message_builder builder;
+      builder.builder << "Generic type bound must be a class!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    if (classes.find(std::string(
+            tokens[out.next_token].token_data.as_identifier.start,
+            tokens[out.next_token].token_data.as_identifier.size)) ==
+        classes.end()) {
+      message_builder builder;
+      builder.builder << "Generic type bound must be a class!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    output<general_type> type =
+        parse<general_type>(filename, tokens, out.next_token, classes);
+    std::copy(type.messages.begin(), type.messages.end(),
+              std::back_inserter(out.messages));
+    out.next_token = type.next_token;
+    if (!type.value) {
+      return out;
+    }
+    bounds.emplace_back(bound, std::move(**type.value));
+  } while (out.next_token < tokens.size() &&
+           tokens[out.next_token].token_data.token_type ==
+               lexer::token::data::type::OPERATOR_TOKEN &&
+           tokens[out.next_token].token_data.as_operator ==
+               lexer::operators::BITAND);
+  out.value =
+      std::make_unique<generic_declaration>(std::move(name), std::move(bounds));
   return out;
 }

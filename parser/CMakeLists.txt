@@ -1,5 +1,6 @@
 target_sources(oops-compiler
 PRIVATE
+access_expression.h
 base_classes.h
 basic_block.h
 class.h
@@ -16,7 +17,6 @@ method.h
 modifiers.h
 nary_expression.h
 returns.h
-scope.h
 semicolon.h
 statement_impl.cpp
 statement.h

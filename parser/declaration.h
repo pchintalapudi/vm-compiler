@@ -12,7 +12,7 @@ namespace oops_compiler {
 namespace parser {
 class declaration : public statement {
  private:
-  std::variant<type_instantiation, access_expression> type;
+  general_type type;
   std::string name;
   std::unique_ptr<expression> expr;
 
