@@ -607,7 +607,7 @@ parse_decl(unparsed_method_declaration) {
         logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
     return out;
   }
-  general_type ret{type_instantiation("void", {}, false)};
+  general_type ret{access_expression(std::make_unique<type_instantiation>("void", std::vector<general_type>{}, false), {})};
   if (mtype != method_declaration::type::CONSTRUCTOR) {
     if (tokens[out.next_token].token_data.token_type !=
             lexer::token::data::type::OPERATOR_TOKEN ||

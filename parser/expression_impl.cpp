@@ -1,9 +1,11 @@
 #include <unordered_set>
 
+#include "access_expression.h"
 #include "expression.h"
 #include "impl_common.h"
 #include "loop_control.h"
 #include "nary_expression.h"
+#include "type.h"
 
 using namespace oops_compiler::parser;
 
@@ -104,22 +106,9 @@ parse_decl(expression) {
         case lexer::keywords::CONTINUE:
           return output<expression>::generalize(
               parse<continue_expression>(filename, tokens, begin, classes));
-        case lexer::keywords::NEW:
-          return parse_nary_expression(filename, tokens, begin, classes);
         default: {
-          output<expression> out;
-          out.filename = filename;
-          out.contexts.push_back(tokens[begin].token_context);
-          out.next_token = begin + 1;
-          message_builder builder;
-          builder.builder << "Invalid keyword "
-                          << lexer::all_mappings
-                                 .keywords_to_strings[static_cast<std::size_t>(
-                                     tokens[begin].token_data.as_keyword)]
-                          << " in start of expression!";
-          out.messages.push_back(builder.build_message(
-              logger::level::FATAL_ERROR, tokens[begin].token_context));
-          return out;
+          return output<expression>::generalize(
+              parse<access_expression>(filename, tokens, begin, classes));
         }
       }
     case lexer::token::data::type::OPERATOR_TOKEN:
@@ -155,3 +144,56 @@ parse_decl(expression) {
       return parse_nary_expression(filename, tokens, begin, classes);
   }
 }
+
+parse_decl(access_chain) {
+  output<access_chain> out;
+  out.filename = filename;
+  out.next_token = begin;
+  out.contexts.push_back(tokens[out.next_token].token_context);
+  std::string identifier(tokens[out.next_token].token_data.as_identifier.start,
+                         tokens[out.next_token].token_data.as_identifier.size);
+  out.next_token++;
+  if (out.next_token < tokens.size() &&
+      tokens[out.next_token].token_data.token_type ==
+          lexer::token::data::type::OPERATOR_TOKEN &&
+      tokens[out.next_token].token_data.as_operator ==
+          lexer::operators::ACCESS) {
+    out.next_token++;
+    if (out.next_token == tokens.size()) {
+      message_builder builder;
+      builder.builder << "Unexpected end of access expression!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    if (tokens[out.next_token].token_data.token_type !=
+        lexer::token::data::type::IDENTIFIER_TOKEN) {
+      message_builder builder;
+      builder.builder << "Expected identifier after access operator!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    output<access_chain> right =
+        parse<access_chain>(filename, tokens, out.next_token, classes);
+    std::copy(right.messages.begin(), right.messages.end(),
+              std::back_inserter(out.messages));
+    out.next_token = right.next_token;
+    if (!right.value) {
+      return out;
+    }
+    out.value = std::make_unique<access_chain>(std::move(identifier),
+                                               std::move(*right.value));
+  } else {
+    out.value = std::make_unique<access_chain>(std::move(identifier),
+                                               std::unique_ptr<access_chain>{});
+  }
+  return out;
+}
+/*
+Expression ordering
+ASSIGNMENT/COMPOUND ASSIGNMENT < LOR < LAND < BOR < BXOR < BAND < EQUALS <
+INSTANCEOF < RELATIONAL < SHIFT < ADD/SUB < MUL/DIV/MOD < CAST <
+LNOT/BNOT/PLUS/MINUS < PREINC/PREDEC < POSTINC/POSTDEC < FUNC/INDEX < ACCESS <
+NEW
+*/

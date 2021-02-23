@@ -832,33 +832,6 @@ parse_decl(declaration) {
 }
 
 parse_decl(general_type) {
-  output<general_type> out;
-  out.filename = filename;
-  out.next_token = begin;
-  out.contexts.push_back(tokens[out.next_token].token_context);
-  output<type_instantiation> type =
-      parse<type_instantiation>(filename, tokens, out.next_token, classes);
-  std::copy(type.messages.begin(), type.messages.end(),
-            std::back_inserter(out.messages));
-  out.next_token = type.next_token;
-  if (!type.value) {
-    return out;
-  }
-  if (tokens.size() > out.next_token &&
-      tokens[out.next_token].token_data.token_type ==
-          lexer::token::data::type::OPERATOR_TOKEN &&
-      tokens[out.next_token].token_data.as_operator ==
-          lexer::operators::ACCESS) {
-    output<access_expression> access =
-        parse<access_expression>(filename, tokens, begin, classes);
-    if (access.value) {
-      std::copy(access.messages.begin(), access.messages.end(),
-                std::back_inserter(out.messages));
-      out.next_token = access.next_token;
-      out.value = std::make_unique<general_type>(std::move(**access.value));
-      return out;
-    }
-  }
-  out.value = std::make_unique<general_type>(std::move(**type.value));
-  return out;
+  return output<general_type>::reconstruct(
+      parse<access_expression>(filename, tokens, begin, classes));
 }

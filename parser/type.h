@@ -9,7 +9,14 @@
 namespace oops_compiler {
 namespace parser {
 class type_instantiation;
-typedef std::variant<type_instantiation, access_expression> general_type;
+class general_type : public expression {
+ private:
+  access_expression type;
+
+ public:
+  general_type(access_expression type) : type(std::move(type)) {}
+  const decltype(type) &get_type() const { return type; }
+};
 
 class type_instantiation : public expression {
  private:

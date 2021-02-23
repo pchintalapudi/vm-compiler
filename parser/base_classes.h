@@ -28,11 +28,23 @@ struct output {
                          .contexts = std::move(out.contexts),
                          .next_token = out.next_token};
   }
+  template <typename in_t>
+  static output<out_t> reconstruct(output<in_t> out) {
+    return output<out_t>{
+        .filename = out.filename,
+        .value =
+            out.value
+                ? std::optional<std::unique_ptr<out_t>>{std::make_unique<out_t>(
+                      std::move(**out.value))}
+                : std::optional<std::unique_ptr<out_t>>{},
+        .messages = std::move(out.messages),
+        .contexts = std::move(out.contexts),
+        .next_token = out.next_token};
+  }
 };
 template <typename node>
-output<node> parse(const char *filename,
-                   std::vector<lexer::token> &tokens, std::size_t begin,
-                   std::unordered_set<std::string> &classes);
+output<node> parse(const char *filename, std::vector<lexer::token> &tokens,
+                   std::size_t begin, std::unordered_set<std::string> &classes);
 
 typedef std::vector<std::string> package_declaration;
 
