@@ -10,7 +10,6 @@
 namespace oops_compiler {
 namespace parser {
 class expression {
- private:
  public:
   virtual ~expression() = default;
 };
