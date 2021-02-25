@@ -128,15 +128,6 @@ parse_decl(expression) {
           break;
       }
       break;
-    case lexer::token::data::type::OPERATOR_TOKEN:
-      switch (tokens[begin].token_data.as_operator) {
-        case lexer::operators::ROUND_OPEN:
-          return output<expression>::generalize(
-              parse<parenthetical>(filename, tokens, begin, classes));
-        default:
-          break;
-      }
-      break;
     default:
       break;
   }
@@ -242,30 +233,15 @@ assignment_expression::type get_assignment_type(
     out.next_token = begin;                                                    \
     out.contexts.push_back(tokens[out.next_token].token_context);              \
     std::unique_ptr<expression> left;                                          \
-    if (tokens[out.next_token].token_data.token_type ==                        \
-            lexer::token::data::type::OPERATOR_TOKEN &&                        \
-        tokens[out.next_token].token_data.as_operator ==                       \
-            lexer::operators::ROUND_OPEN) {                                    \
-      output<parenthetical> paren =                                            \
-          parse<parenthetical>(filename, tokens, out.next_token, classes);     \
-      std::copy(paren.messages.begin(), paren.messages.end(),                  \
-                std::back_inserter(out.messages));                             \
-      out.next_token = paren.next_token;                                       \
-      if (!paren.value) {                                                      \
-        return out;                                                            \
-      }                                                                        \
-      left = std::move(*paren.value);                                          \
-    } else {                                                                   \
-      output<nexttype> next =                                                  \
-          parse<nexttype>(filename, tokens, out.next_token, classes);          \
-      std::copy(next.messages.begin(), next.messages.end(),                    \
-                std::back_inserter(out.messages));                             \
-      out.next_token = next.next_token;                                        \
-      if (!next.value) {                                                       \
-        return out;                                                            \
-      }                                                                        \
-      left = std::move(*next.value);                                           \
+    output<nexttype> next =                                                    \
+        parse<nexttype>(filename, tokens, out.next_token, classes);            \
+    std::copy(next.messages.begin(), next.messages.end(),                      \
+              std::back_inserter(out.messages));                               \
+    out.next_token = next.next_token;                                          \
+    if (!next.value) {                                                         \
+      return out;                                                              \
     }                                                                          \
+    left = std::move(*next.value);                                             \
     if (out.next_token == tokens.size() ||                                     \
         tokens[out.next_token].token_data.token_type !=                        \
             lexer::token::data::type::OPERATOR_TOKEN) {                        \
@@ -310,30 +286,15 @@ multi_binary_expression(assignment_expression, lor_expression, "assignment",
     out.next_token = begin;                                                  \
     out.contexts.push_back(tokens[out.next_token].token_context);            \
     std::unique_ptr<expression> left;                                        \
-    if (tokens[out.next_token].token_data.token_type ==                      \
-            lexer::token::data::type::OPERATOR_TOKEN &&                      \
-        tokens[out.next_token].token_data.as_operator ==                     \
-            lexer::operators::ROUND_OPEN) {                                  \
-      output<parenthetical> paren =                                          \
-          parse<parenthetical>(filename, tokens, out.next_token, classes);   \
-      std::copy(paren.messages.begin(), paren.messages.end(),                \
-                std::back_inserter(out.messages));                           \
-      out.next_token = paren.next_token;                                     \
-      if (!paren.value) {                                                    \
-        return out;                                                          \
-      }                                                                      \
-      left = std::move(*paren.value);                                        \
-    } else {                                                                 \
-      output<nexttype> next =                                                \
-          parse<nexttype>(filename, tokens, out.next_token, classes);        \
-      std::copy(next.messages.begin(), next.messages.end(),                  \
-                std::back_inserter(out.messages));                           \
-      out.next_token = next.next_token;                                      \
-      if (!next.value) {                                                     \
-        return out;                                                          \
-      }                                                                      \
-      left = std::move(*next.value);                                         \
+    output<nexttype> next =                                                  \
+        parse<nexttype>(filename, tokens, out.next_token, classes);          \
+    std::copy(next.messages.begin(), next.messages.end(),                    \
+              std::back_inserter(out.messages));                             \
+    out.next_token = next.next_token;                                        \
+    if (!next.value) {                                                       \
+      return out;                                                            \
     }                                                                        \
+    left = std::move(*next.value);                                           \
     if (out.next_token == tokens.size() ||                                   \
         tokens[out.next_token].token_data.token_type !=                      \
             lexer::token::data::type::OPERATOR_TOKEN) {                      \
@@ -409,30 +370,15 @@ multi_binary_expression(equals_expression, is_expression, "equality",
     out.next_token = begin;                                                  \
     out.contexts.push_back(tokens[out.next_token].token_context);            \
     std::unique_ptr<expression> left;                                        \
-    if (tokens[out.next_token].token_data.token_type ==                      \
-            lexer::token::data::type::OPERATOR_TOKEN &&                      \
-        tokens[out.next_token].token_data.as_operator ==                     \
-            lexer::operators::ROUND_OPEN) {                                  \
-      output<parenthetical> paren =                                          \
-          parse<parenthetical>(filename, tokens, out.next_token, classes);   \
-      std::copy(paren.messages.begin(), paren.messages.end(),                \
-                std::back_inserter(out.messages));                           \
-      out.next_token = paren.next_token;                                     \
-      if (!paren.value) {                                                    \
-        return out;                                                          \
-      }                                                                      \
-      left = std::move(*paren.value);                                        \
-    } else {                                                                 \
-      output<nexttype> next =                                                \
-          parse<nexttype>(filename, tokens, out.next_token, classes);        \
-      std::copy(next.messages.begin(), next.messages.end(),                  \
-                std::back_inserter(out.messages));                           \
-      out.next_token = next.next_token;                                      \
-      if (!next.value) {                                                     \
-        return out;                                                          \
-      }                                                                      \
-      left = std::move(*next.value);                                         \
+    output<nexttype> next =                                                  \
+        parse<nexttype>(filename, tokens, out.next_token, classes);          \
+    std::copy(next.messages.begin(), next.messages.end(),                    \
+              std::back_inserter(out.messages));                             \
+    out.next_token = next.next_token;                                        \
+    if (!next.value) {                                                       \
+      return out;                                                            \
     }                                                                        \
+    left = std::move(*next.value);                                           \
     if (out.next_token == tokens.size() ||                                   \
         tokens[out.next_token].token_data.token_type !=                      \
             lexer::token::data::type::KEYWORD_TOKEN) {                       \
@@ -555,3 +501,218 @@ multi_binary_expression(multiplicative_expression, cast_expression,
                         "multiplicative", get_multiplicative_type);
 single_binary_keyword_expression(cast_expression, prefix_expression, "cast",
                                  lexer::keywords::AS);
+
+parse_decl(prefix_expression) {
+  output<prefix_expression> out;
+  out.filename = filename;
+  out.next_token = begin;
+  out.contexts.push_back(tokens[out.next_token].token_context);
+  if (tokens[out.next_token].token_data.token_type ==
+      lexer::token::data::type::OPERATOR_TOKEN) {
+    prefix_expression::type t;
+    switch (tokens[out.next_token].token_data.as_operator) {
+      case lexer::operators::ADD:
+        t = prefix_expression::type::PLUS;
+        break;
+      case lexer::operators::SUB:
+        t = prefix_expression::type::MINUS;
+        break;
+      case lexer::operators::LNOT:
+        t = prefix_expression::type::LNOT;
+        break;
+      case lexer::operators::BITNOT:
+        t = prefix_expression::type::BNOT;
+        break;
+      case lexer::operators::INC:
+        t = prefix_expression::type::INC;
+        break;
+      case lexer::operators::DEC:
+        t = prefix_expression::type::DEC;
+        break;
+      default:
+        t = prefix_expression::type::NONE;
+        break;
+    }
+    if (t != prefix_expression::type::NONE) {
+      out.next_token++;
+      if (tokens.size() == out.next_token) {
+        message_builder builder;
+        builder.builder << "Unexpected end of prefix expression!";
+        out.messages.push_back(builder.build_message(
+            logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+        return out;
+      }
+      output<prefix_expression> after =
+          parse<prefix_expression>(filename, tokens, out.next_token, classes);
+      std::copy(after.messages.begin(), after.messages.end(),
+                std::back_inserter(out.messages));
+      out.next_token = after.next_token;
+      if (!after.value) {
+        return out;
+      }
+      out.value =
+          std::make_unique<prefix_expression>(t, std::move(*after.value));
+      return out;
+    }
+  }
+  output<postfix_expression> after =
+      parse<postfix_expression>(filename, tokens, out.next_token, classes);
+  std::copy(after.messages.begin(), after.messages.end(),
+            std::back_inserter(out.messages));
+  out.next_token = after.next_token;
+  if (!after.value) {
+    return out;
+  }
+  out.value = std::make_unique<prefix_expression>(prefix_expression::type::NONE,
+                                                  std::move(*after.value));
+  return out;
+}
+
+parse_decl(postfix_expression) {
+  output<postfix_expression> out;
+  out.filename = filename;
+  out.next_token = begin;
+  out.contexts.push_back(tokens[out.next_token].token_context);
+  output<access_expression> identifier =
+      parse<access_expression>(filename, tokens, out.next_token, classes);
+  std::copy(identifier.messages.begin(), identifier.messages.end(),
+            std::back_inserter(out.messages));
+  out.next_token = identifier.next_token;
+  if (!identifier.value) {
+    return out;
+  }
+  if (tokens.size() == out.next_token) {
+    out.value = std::make_unique<postfix_expression>(
+        postfix_expression::type::NONE, std::move(*identifier.value));
+    return out;
+  }
+  std::unique_ptr<expression> building = std::move(*identifier.value);
+  do {
+    if (tokens.size() == out.next_token) {
+      break;
+    }
+    if (tokens[out.next_token].token_data.token_type !=
+        lexer::token::data::type::OPERATOR_TOKEN) {
+      break;
+    }
+    switch (tokens[out.next_token].token_data.as_operator) {
+      case lexer::operators::INC:
+        building = std::make_unique<postfix_expression>(
+            postfix_expression::type::INC, std::move(building));
+        break;
+      case lexer::operators::DEC:
+        building = std::make_unique<postfix_expression>(
+            postfix_expression::type::DEC, std::move(building));
+        break;
+      case lexer::operators::ROUND_OPEN: {
+        std::vector<std::unique_ptr<expression>> arguments;
+        do {
+          out.next_token++;
+          if (tokens.size() == out.next_token) {
+            message_builder builder;
+            builder.builder << "Unexpected end of function call expression!";
+            out.messages.push_back(
+                builder.build_message(logger::level::FATAL_ERROR,
+                                      tokens[out.next_token].token_context));
+            return out;
+          }
+          output<expression> arg =
+              parse<expression>(filename, tokens, out.next_token, classes);
+          std::copy(arg.messages.begin(), arg.messages.end(),
+                    std::back_inserter(out.messages));
+          out.next_token = arg.next_token;
+          if (!arg.value) {
+            return out;
+          }
+          arguments.push_back(std::move(*arg.value));
+          if (tokens.size() == out.next_token) {
+            message_builder builder;
+            builder.builder << "Unexpected end of function call expression!";
+            out.messages.push_back(
+                builder.build_message(logger::level::FATAL_ERROR,
+                                      tokens[out.next_token].token_context));
+            return out;
+          }
+          if (tokens[out.next_token].token_data.token_type !=
+                  lexer::token::data::type::OPERATOR_TOKEN ||
+              (tokens[out.next_token].token_data.as_operator !=
+                   lexer::operators::ROUND_CLOSE &&
+               tokens[out.next_token].token_data.as_operator !=
+                   lexer::operators::COMMA)) {
+            message_builder builder;
+            builder.builder << "Unexpected token in function call expression!";
+            out.messages.push_back(
+                builder.build_message(logger::level::FATAL_ERROR,
+                                      tokens[out.next_token].token_context));
+            return out;
+          }
+        } while (tokens[out.next_token].token_data.as_operator ==
+                 lexer::operators::COMMA);
+        out.next_token++;
+        building = std::make_unique<call_expression>(
+            call_expression::type::FUNCTION, std::move(building),
+            std::move(arguments));
+        break;
+      }
+      case lexer::operators::SQUARE_OPEN: {
+        std::vector<std::unique_ptr<expression>> arguments;
+        do {
+          out.next_token++;
+          if (tokens.size() == out.next_token) {
+            message_builder builder;
+            builder.builder << "Unexpected end of index expression!";
+            out.messages.push_back(
+                builder.build_message(logger::level::FATAL_ERROR,
+                                      tokens[out.next_token].token_context));
+            return out;
+          }
+          output<expression> arg =
+              parse<expression>(filename, tokens, out.next_token, classes);
+          std::copy(arg.messages.begin(), arg.messages.end(),
+                    std::back_inserter(out.messages));
+          out.next_token = arg.next_token;
+          if (!arg.value) {
+            return out;
+          }
+          arguments.push_back(std::move(*arg.value));
+          if (tokens.size() == out.next_token) {
+            message_builder builder;
+            builder.builder << "Unexpected end of index expression!";
+            out.messages.push_back(
+                builder.build_message(logger::level::FATAL_ERROR,
+                                      tokens[out.next_token].token_context));
+            return out;
+          }
+          if (tokens[out.next_token].token_data.token_type !=
+                  lexer::token::data::type::OPERATOR_TOKEN ||
+              (tokens[out.next_token].token_data.as_operator !=
+                   lexer::operators::SQUARE_CLOSE &&
+               tokens[out.next_token].token_data.as_operator !=
+                   lexer::operators::COMMA)) {
+            message_builder builder;
+            builder.builder << "Unexpected token in index expression!";
+            out.messages.push_back(
+                builder.build_message(logger::level::FATAL_ERROR,
+                                      tokens[out.next_token].token_context));
+            return out;
+          }
+        } while (tokens[out.next_token].token_data.as_operator ==
+                 lexer::operators::COMMA);
+        out.next_token++;
+        building = std::make_unique<call_expression>(
+            call_expression::type::INDEX, std::move(building),
+            std::move(arguments));
+        break;
+      }
+      default:
+        goto done;
+    }
+    out.next_token++;
+  } while (true);
+done:
+  if (building) {
+    out.value = std::make_unique<postfix_expression>(
+        postfix_expression::type::NONE, std::move(building));
+  }
+  return out;
+}

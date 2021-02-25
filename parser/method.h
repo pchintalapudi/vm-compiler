@@ -12,14 +12,14 @@
 namespace oops_compiler {
 namespace parser {
 class class_definition;
-class argument {
+class parameter {
  private:
   general_type type;
   std::string name;
   std::unique_ptr<expression> default_value;
 
  public:
-  argument(decltype(type) type, std::string name,
+  parameter(decltype(type) type, std::string name,
            std::optional<std::unique_ptr<expression>> default_value)
       : type(std::move(type)),
         name(std::move(name)),
@@ -40,7 +40,7 @@ class method_declaration {
   special spec;
   bool fin;
   general_type ret;
-  std::vector<argument> parameters;
+  std::vector<parameter> parameters;
 
  public:
   method_declaration(type_declaration decl, modifiers mods, storage store,
@@ -69,7 +69,7 @@ class unparsed_method_declaration : public method_declaration {
   unparsed_method_declaration(type_declaration decl, modifiers mods,
                               storage store, special spec, bool fin,
                               general_type ret,
-                              std::vector<argument> parameters,
+                              std::vector<parameter> parameters,
                               std::vector<lexer::token> tokens)
       : method_declaration(std::move(decl), mods, store, spec, fin,
                            std::move(ret), std::move(parameters)),

@@ -11,7 +11,7 @@ parse_decl(class_definition);
 parse_decl(unparsed_method_declaration);
 parse_decl(variable);
 parse_decl(source_file);
-parse_decl(argument);
+parse_decl(parameter);
 parse_decl(type_declaration);
 parse_decl(generic_declaration);
 
@@ -539,7 +539,7 @@ parse_decl(unparsed_method_declaration) {
     return out;
   }
   bool first_argument_correction = true;
-  std::vector<argument> arguments;
+  std::vector<parameter> arguments;
   while (tokens[out.next_token].token_data.token_type !=
              lexer::token::data::type::OPERATOR_TOKEN &&
          tokens[out.next_token].token_data.as_operator !=
@@ -557,13 +557,13 @@ parse_decl(unparsed_method_declaration) {
     if (tokens[out.next_token].token_data.token_type !=
         lexer::token::data::type::IDENTIFIER_TOKEN) {
       message_builder builder;
-      builder.builder << "Method argument must begin with an identifier!";
+      builder.builder << "Method parameter must begin with an identifier!";
       out.messages.push_back(builder.build_message(
           logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
       return out;
     }
-    output<argument> arg =
-        parse<argument>(filename, tokens, out.next_token, classes);
+    output<parameter> arg =
+        parse<parameter>(filename, tokens, out.next_token, classes);
     std::copy(arg.messages.begin(), arg.messages.end(),
               std::back_inserter(out.messages));
     out.next_token = arg.next_token;
@@ -586,7 +586,7 @@ parse_decl(unparsed_method_declaration) {
                 lexer::operators::COMMA)) {
       message_builder builder;
       builder.builder << "Expected comma or close parenthesis to continue "
-                         "argument declarations!";
+                         "parameter declarations!";
       out.messages.push_back(builder.build_message(
           logger::level::ERROR, tokens[out.next_token].token_context));
       out.next_token++;
@@ -702,8 +702,8 @@ parse_decl(unparsed_method_declaration) {
   return out;
 }
 
-parse_decl(argument) {
-  output<argument> out;
+parse_decl(parameter) {
+  output<parameter> out;
   out.filename = filename;
   out.next_token = begin;
   out.contexts.push_back(tokens[out.next_token].token_context);
@@ -717,7 +717,7 @@ parse_decl(argument) {
   }
   if (out.next_token == tokens.size()) {
     message_builder builder;
-    builder.builder << "Unexpected end of argument declaration!";
+    builder.builder << "Unexpected end of parameter declaration!";
     out.messages.push_back(builder.build_message(
         logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
     return out;
@@ -733,7 +733,7 @@ parse_decl(argument) {
     out.next_token++;
     if (tokens.size() == out.next_token) {
       message_builder builder;
-      builder.builder << "Unexpected end of argument default value!";
+      builder.builder << "Unexpected end of parameter default value!";
       out.messages.push_back(builder.build_message(
           logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
       return out;
@@ -748,7 +748,7 @@ parse_decl(argument) {
     }
     default_value = std::move(*expr.value);
   }
-  out.value = std::make_unique<argument>(
+  out.value = std::make_unique<parameter>(
       std::move(**type.value), std::move(name), std::move(default_value));
   return out;
 }

@@ -236,12 +236,79 @@ parse_decl(semicolon_statement) {
   out.value = std::make_unique<semicolon_statement>(std::move(*expr.value));
   return out;
 }
-
-std::variant<output<for_statement>, output<enhanced_for_statement>>
-parse_generalized_for(const char *filename,
-                      const std::vector<oops_compiler::lexer::token> &tokens,
-                      std::size_t begin,
-                      std::unordered_set<std::string> &classes);
+namespace {
+output<statement> parse_generalized_for(
+    const char *filename, std::vector<oops_compiler::lexer::token> &tokens,
+    std::size_t begin, std::unordered_set<std::string> &classes) {
+  output<statement> out;
+  out.filename = filename;
+  out.next_token = begin;
+  out.contexts.push_back(tokens[out.next_token].token_context);
+  out.next_token++;
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of for statement!";
+    out.messages.push_back(
+        builder.build_message(oops_compiler::logger::level::ERROR,
+                              tokens[out.next_token - 1].token_context));
+  }
+  if (tokens[out.next_token].token_data.token_type !=
+          oops_compiler::lexer::token::data::type::OPERATOR_TOKEN ||
+      tokens[out.next_token].token_data.as_operator !=
+          oops_compiler::lexer::operators::ROUND_OPEN) {
+    message_builder builder;
+    builder.builder << "For statement must have a parenthesized condition!";
+    out.messages.push_back(
+        builder.build_message(oops_compiler::logger::level::FATAL_ERROR,
+                              tokens[out.next_token].token_context));
+    out.next_token = out.next_token;
+    return out;
+  }
+  out.next_token++;
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of for statement!";
+    out.messages.push_back(
+        builder.build_message(oops_compiler::logger::level::ERROR,
+                              tokens[out.next_token - 1].token_context));
+  }
+  if (tokens[out.next_token].token_data.token_type ==
+          oops_compiler::lexer::token::data::type::IDENTIFIER_TOKEN &&
+      classes.find(
+          std::string(tokens[out.next_token].token_data.as_identifier.start,
+                      tokens[out.next_token].token_data.as_identifier.size)) !=
+          classes.end()) {
+    output<general_type> type =
+        parse<general_type>(filename, tokens, out.next_token, classes);
+    if (type.value && tokens.size() > type.next_token + 1 &&
+        tokens[type.next_token].token_data.token_type ==
+            oops_compiler::lexer::token::data::type::IDENTIFIER_TOKEN &&
+        tokens[type.next_token + 1].token_data.token_type ==
+            oops_compiler::lexer::token::data::type::OPERATOR_TOKEN &&
+        tokens[type.next_token + 1].token_data.as_operator ==
+            oops_compiler::lexer::operators::COLON) {
+      output<enhanced_for_statement> enhanced = parse<enhanced_for_statement>(
+          filename, tokens, out.next_token, classes);
+      std::copy(enhanced.messages.begin(), enhanced.messages.end(),
+                std::back_inserter(out.messages));
+      out.next_token = enhanced.next_token;
+      if (enhanced.value) {
+        out.value = std::move(*enhanced.value);
+      }
+      return out;
+    }
+  }
+  output<for_statement> regular =
+      parse<for_statement>(filename, tokens, out.next_token, classes);
+  std::copy(regular.messages.begin(), regular.messages.end(),
+            std::back_inserter(out.messages));
+  out.next_token = regular.next_token;
+  if (regular.value) {
+    out.value = std::move(*regular.value);
+  }
+  return out;
+}
+}  // namespace
 
 parse_decl(statement) {
   switch (tokens[begin].token_data.token_type) {
@@ -251,14 +318,8 @@ parse_decl(statement) {
         case lexer::keywords::CONTINUE:
         case lexer::keywords::NEW:
           break;
-        case lexer::keywords::FOR: {
-          auto out = parse_generalized_for(filename, tokens, begin, classes);
-          return std::holds_alternative<output<for_statement>>(out)
-                     ? output<statement>::generalize(
-                           std::move(std::get<output<for_statement>>(out)))
-                     : output<statement>::generalize(std::move(
-                           std::get<output<enhanced_for_statement>>(out)));
-        }
+        case lexer::keywords::FOR:
+          return parse_generalized_for(filename, tokens, begin, classes);
         case lexer::keywords::WHILE:
           return output<statement>::generalize(
               parse<while_statement>(filename, tokens, begin, classes));

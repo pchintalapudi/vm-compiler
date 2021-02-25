@@ -15,7 +15,7 @@ NEW
 */
 #define multi_binary_expression(expr_type, ...)                      \
   struct expr_type##_expression : public expression {                \
-    enum class type { __VA_ARGS__, NONE };                           \
+    enum class type { NONE, __VA_ARGS__ };                           \
     type t;                                                          \
     std::unique_ptr<expression> left;                                \
     std::unique_ptr<expression> right;                               \
@@ -46,18 +46,18 @@ multi_binary_expression(shift, SLL, SRA, SRL);
 multi_binary_expression(addition, ADD, SUB);
 multi_binary_expression(multiplicative, MUL, DIV, MOD);
 binary_expression(cast);
-#define multi_unary_expression(type, ...)                       \
-  struct type##_expression : public expression {                \
-    enum class type { __VA_ARGS__, NONE };                      \
-    type t;                                                     \
-    std::unique_ptr<expression> expr;                           \
-    type##_expression(type t, std::unique_ptr<expression> expr) \
-        : t(t), expr(std::move(expr)) {}                        \
+#define multi_unary_expression(expr_type, ...)                       \
+  struct expr_type##_expression : public expression {                \
+    enum class type { NONE, __VA_ARGS__ };                           \
+    type t;                                                          \
+    std::unique_ptr<expression> expr;                                \
+    expr_type##_expression(type t, std::unique_ptr<expression> expr) \
+        : t(t), expr(std::move(expr)) {}                             \
   }
 multi_unary_expression(prefix, LNOT, BNOT, PLUS, MINUS, INC, DEC);
 multi_unary_expression(postfix, INC, DEC);
 struct call_expression : public expression {
-  enum class type { FUNCTION, INDEX, NONE };
+  enum class type { NONE, FUNCTION, INDEX };
   type t;
   std::unique_ptr<expression> callable;
   std::vector<std::unique_ptr<expression>> arguments;
