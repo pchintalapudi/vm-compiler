@@ -607,7 +607,10 @@ parse_decl(unparsed_method_declaration) {
         logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
     return out;
   }
-  general_type ret{access_expression(std::make_unique<type_instantiation>("void", std::vector<general_type>{}, false), {})};
+  general_type ret{
+      access_expression(std::make_unique<type_instantiation>(
+                            "void", std::vector<general_type>{}, false),
+                        {})};
   if (mtype != method_declaration::type::CONSTRUCTOR) {
     if (tokens[out.next_token].token_data.token_type !=
             lexer::token::data::type::OPERATOR_TOKEN ||
@@ -907,5 +910,276 @@ parse_decl(generic_declaration) {
                lexer::operators::BITAND);
   out.value =
       std::make_unique<generic_declaration>(std::move(name), std::move(bounds));
+  return out;
+}
+
+parse_decl(class_definition) {
+  output<class_definition> out;
+  out.filename = filename;
+  out.next_token = begin;
+  out.contexts.push_back(tokens[out.next_token].token_context);
+  out.next_token++;
+  if (out.next_token == tokens.size()) {
+    message_builder builder;
+    builder.builder << "Unexpected end of class declaration!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  output<type_declaration> decl =
+      parse<type_declaration>(filename, tokens, out.next_token, classes);
+  std::copy(decl.messages.begin(), decl.messages.end(),
+            std::back_inserter(out.messages));
+  out.next_token = decl.next_token;
+  if (!decl.value) {
+    return out;
+  }
+  if (out.next_token == tokens.size()) {
+    message_builder builder;
+    builder.builder << "Unexpected end of class declaration!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  std::optional<general_type> superclass;
+  if (tokens[out.next_token].token_data.token_type ==
+          lexer::token::data::type::KEYWORD_TOKEN &&
+      tokens[out.next_token].token_data.as_keyword ==
+          lexer::keywords::EXTENDS) {
+    out.next_token++;
+    if (out.next_token == tokens.size()) {
+      message_builder builder;
+      builder.builder << "Unexpected end of class extension declaration!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    output<general_type> superclassret =
+        parse<general_type>(filename, tokens, out.next_token, classes);
+    std::copy(superclassret.messages.begin(), superclassret.messages.end(),
+              std::back_inserter(out.messages));
+    out.next_token = superclassret.next_token;
+    if (!superclassret.value) {
+      return out;
+    }
+    superclass = std::move(**superclassret.value);
+    if (out.next_token == tokens.size()) {
+      message_builder builder;
+      builder.builder << "Unexpected end of class declaration!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+  }
+  std::vector<general_type> interfaces;
+  if (tokens[out.next_token].token_data.token_type ==
+          lexer::token::data::type::KEYWORD_TOKEN &&
+      tokens[out.next_token].token_data.as_keyword ==
+          lexer::keywords::IMPLEMENTS) {
+    do {
+      out.next_token++;
+      if (out.next_token == tokens.size()) {
+        message_builder builder;
+        builder.builder << "Unexpected end of interface extension declaration!";
+        out.messages.push_back(builder.build_message(
+            logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+        return out;
+      }
+      output<general_type> interface =
+          parse<general_type>(filename, tokens, out.next_token, classes);
+      std::copy(interface.messages.begin(), interface.messages.end(),
+                std::back_inserter(out.messages));
+      out.next_token = interface.next_token;
+      if (!interface.value) {
+        return out;
+      }
+      interfaces.push_back(std::move(**interface.value));
+      if (out.next_token == tokens.size()) {
+        message_builder builder;
+        builder.builder << "Unexpected end of class declaration!";
+        out.messages.push_back(builder.build_message(
+            logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+        return out;
+      }
+      if (tokens[out.next_token].token_data.token_type !=
+              lexer::token::data::type::OPERATOR_TOKEN ||
+          (tokens[out.next_token].token_data.as_operator !=
+               lexer::operators::COMMA &&
+           tokens[out.next_token].token_data.as_operator !=
+               lexer::operators::CURLY_OPEN)) {
+        message_builder builder;
+        builder.builder << "Expected comma separated interface declarations!";
+        out.messages.push_back(builder.build_message(
+            logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+        return out;
+      }
+    } while (tokens[out.next_token].token_data.as_operator ==
+             lexer::operators::COMMA);
+  }
+  if (tokens[out.next_token].token_data.token_type !=
+          lexer::token::data::type::OPERATOR_TOKEN ||
+      tokens[out.next_token].token_data.as_operator !=
+          lexer::operators::CURLY_OPEN) {
+    message_builder builder;
+    builder.builder << "Expected class to open with a curly brace!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  std::vector<std::unique_ptr<variable>> vars;
+  std::vector<std::unique_ptr<method_declaration>> mtds;
+  std::vector<std::unique_ptr<class_definition>> sub_classes;
+  out.next_token++;
+  if (out.next_token == tokens.size()) {
+    message_builder builder;
+    builder.builder << "Unexpected end of class definition!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  while (tokens[out.next_token].token_data.token_type ==
+         lexer::token::data::type::KEYWORD_TOKEN) {
+    if (out.next_token + 4 >= tokens.size()) {
+      message_builder builder;
+      builder.builder << "Unexpected end of class declaration!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    if (tokens[out.next_token].token_data.token_type !=
+        lexer::token::data::type::KEYWORD_TOKEN) {
+      message_builder builder;
+      builder.builder << "Class member must begin with public, protected, "
+                         "package, or private!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    switch (tokens[out.next_token].token_data.as_keyword) {
+      case lexer::keywords::PUBLIC:
+      case lexer::keywords::PROTECTED:
+      case lexer::keywords::PACKAGE:
+      case lexer::keywords::PRIVATE:
+        break;
+      default: {
+        message_builder builder;
+        builder.builder << "Class member must begin with public, protected, "
+                           "package, or private!";
+        out.messages.push_back(builder.build_message(
+            logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+        return out;
+      }
+    }
+    bool parse_class = false;
+    bool parse_variable = false;
+    std::size_t offset = out.next_token;
+    offset++;
+    if (tokens[offset].token_data.token_type !=
+        lexer::token::data::type::KEYWORD_TOKEN) {
+      parse_variable = true;
+      goto parse;
+    }
+    switch (tokens[offset].token_data.as_keyword) {
+      case lexer::keywords::CLASS:
+        parse_class = true;
+        goto parse;
+      case lexer::keywords::STATIC:
+        offset++;
+        break;
+      case lexer::keywords::FINAL:
+        offset++;
+        break;
+      default:
+        break;
+    }
+    if (tokens[offset].token_data.token_type !=
+        lexer::token::data::type::KEYWORD_TOKEN) {
+      parse_variable = true;
+      goto parse;
+    }
+    switch (tokens[offset].token_data.as_keyword) {
+      case lexer::keywords::STATIC:
+        offset++;
+        break;
+      case lexer::keywords::FINAL:
+        offset++;
+        break;
+      default:
+        break;
+    }
+    if (tokens[offset].token_data.token_type !=
+        lexer::token::data::type::KEYWORD_TOKEN) {
+      parse_variable = true;
+      goto parse;
+    }
+    switch (tokens[offset].token_data.as_keyword) {
+      case lexer::keywords::NATIVE:
+      case lexer::keywords::INTRINSIC:
+      case lexer::keywords::DEF:
+      case lexer::keywords::CONSTRUCTOR:
+      case lexer::keywords::GET:
+      case lexer::keywords::SET:
+      case lexer::keywords::OPERATOR:
+        break;
+      default:
+        parse_variable = true;
+        break;
+    }
+  parse:
+    if (parse_class) {
+      output<class_definition> cls =
+          parse<class_definition>(filename, tokens, out.next_token, classes);
+      std::copy(cls.messages.begin(), cls.messages.end(),
+                std::back_inserter(out.messages));
+      out.next_token = cls.next_token;
+      if (!cls.value) {
+        return out;
+      }
+      sub_classes.push_back(std::move(*cls.value));
+    } else if (parse_variable) {
+      output<variable> var =
+          parse<variable>(filename, tokens, out.next_token, classes);
+      std::copy(var.messages.begin(), var.messages.end(),
+                std::back_inserter(out.messages));
+      out.next_token = var.next_token;
+      if (!var.value) {
+        return out;
+      }
+      vars.push_back(std::move(*var.value));
+    } else {
+      output<unparsed_method_declaration> mtd =
+          parse<unparsed_method_declaration>(filename, tokens, out.next_token,
+                                             classes);
+      std::copy(mtd.messages.begin(), mtd.messages.end(),
+                std::back_inserter(out.messages));
+      out.next_token = mtd.next_token;
+      if (!mtd.value) {
+        return out;
+      }
+      mtds.push_back(std::move(*mtd.value));
+    }
+  }
+  while (out.next_token < tokens.size() &&
+         (tokens[out.next_token].token_data.token_type !=
+              lexer::token::data::type::OPERATOR_TOKEN ||
+          tokens[out.next_token].token_data.as_operator !=
+              lexer::operators::CURLY_CLOSE)) {
+    message_builder builder;
+    builder.builder << "Expected class to end here!";
+    out.messages.push_back(builder.build_message(
+        logger::level::ERROR, tokens[out.next_token].token_context));
+    out.next_token++;
+  }
+  if (out.next_token + 4 >= tokens.size()) {
+    message_builder builder;
+    builder.builder << "Unexpected end of class declaration!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  out.next_token++;
+  out.value = std::make_unique<class_definition>(
+      std::move(**decl.value), std::move(sub_classes), std::move(interfaces),
+      std::move(superclass), std::move(vars), std::move(mtds));
   return out;
 }

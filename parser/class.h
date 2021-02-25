@@ -19,15 +19,14 @@ class classloader;
 class class_definition {
  private:
   type_declaration decl;
-  std::vector<class_definition> sub_classes;
+  std::vector<std::unique_ptr<class_definition>> sub_classes;
   std::optional<general_type> super;
   std::vector<general_type> interfaces;
   std::vector<std::unique_ptr<variable>> vars;
   std::vector<std::unique_ptr<method_declaration>> mtds;
 
  public:
-  class_definition(type_declaration decl,
-                   std::vector<class_definition> sub_classes,
+  class_definition(type_declaration decl, decltype(sub_classes) sub_classes,
                    decltype(interfaces) interfaces, decltype(super) super,
                    decltype(vars) vars, decltype(mtds) mtds)
       : decl(std::move(decl)),
