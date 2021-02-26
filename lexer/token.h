@@ -40,6 +40,20 @@ struct token {
       operators as_operator;
       keywords as_keyword;
     };
+    template <typename t>
+    t &as() {
+      if constexpr (std::is_same_v<t, string>) {
+        return this->as_identifier;
+      } else if constexpr (std::is_same_v<t, literal>) {
+        return this->as_literal;
+      } else if constexpr (std::is_same_v<t, operators>) {
+        return this->as_operator;
+      } else if constexpr (std::is_same_v<t, keywords>) {
+        return this->as_keyword;
+      } else {
+        static_assert(std::is_same_v<t, int> && !std::is_same_v<t, int>);
+      }
+    }
   };
 
   data token_data;
