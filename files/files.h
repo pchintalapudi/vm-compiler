@@ -8,8 +8,13 @@ namespace oops_compiler {
 namespace files {
 
 struct mmap_file_impl {
-  void *file_handle;
-  void *file_mapping_handle;
+  union {
+    struct {
+      void *file_handle;
+      void *file_mapping_handle;
+    };
+    int fd;
+  };
   void *file_view;
   std::uintptr_t file_size;
 };

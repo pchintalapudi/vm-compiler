@@ -345,6 +345,7 @@ parse_decl(source_file) {
   }
   out.value = std::make_unique<source_file>(
       filename, std::move(imports), std::move(package), std::move(*cls.value));
+  return out;
 }
 
 parse_decl(unparsed_method_declaration) {

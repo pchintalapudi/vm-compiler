@@ -1,19 +1,18 @@
 #include "platform_selector.h"
 #ifdef OOPS_COMPILE_FOR_WINDOWS
-#include "files.h"
-#include <iostream>
-using namespace oops_compiler::files;
-
 #include <fileapi.h>
 #include <handleapi.h>
 #include <windows.h>
 
+#include <iostream>
 #include <string>
 
 #include "files.h"
 
-std::optional<oops_compiler::files::mmap_file> mmap_file::create(const char *filename,
-                                                           int length) {
+using namespace oops_compiler::files;
+
+std::optional<oops_compiler::files::mmap_file> mmap_file::create(
+    const char *filename, int length) {
   mmap_file_impl impl;
   std::string file;
   file.resize(length + 2);
@@ -22,13 +21,14 @@ std::optional<oops_compiler::files::mmap_file> mmap_file::create(const char *fil
   int last = -1;
   for (int i = 0; i < length; i++) {
     last = filename[i] == '.' ? i : last;
-    file[i+2] = filename[i] == '.' ? '/' : filename[i];
+    file[i + 2] = filename[i] == '.' ? '/' : filename[i];
   }
   if (last == -1) {
     return {};
   }
-  file[last+2] = '.';
-  std::cout << "Original: " << filename << "\nFile: " << file << "\nLength: " << length << "\n";
+  file[last + 2] = '.';
+  std::cout << "Original: " << filename << "\nFile: " << file
+            << "\nLength: " << length << "\n";
   impl.file_handle = CreateFile(file.c_str(), GENERIC_READ, 0, NULL,
                                 OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
   if (impl.file_handle != INVALID_HANDLE_VALUE) {
@@ -51,7 +51,7 @@ std::optional<oops_compiler::files::mmap_file> mmap_file::create(const char *fil
   }
   return {};
 }
-const void* mmap_file::operator*() const { return this->impl.file_view; }
+const void *mmap_file::operator*() const { return this->impl.file_view; }
 std::uintptr_t mmap_file::file_size() const { return this->impl.file_size; }
 mmap_file::~mmap_file() {
   if (this->impl.file_size) {

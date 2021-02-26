@@ -76,6 +76,7 @@ parse_decl(while_statement) {
   begin = out.next_token;
   out.value = std::make_unique<while_statement>(std::move(*conditional.value),
                                                 std::move(*stmnt.value));
+  return out;
 }
 parse_decl(if_statement) {
   output<if_statement> out;
@@ -117,6 +118,7 @@ parse_decl(if_statement) {
   begin = out.next_token;
   out.value = std::make_unique<if_statement>(std::move(*conditional.value),
                                              std::move(*stmnt.value));
+  return out;
 }
 parse_decl(else_statement) {
   output<else_statement> out;
@@ -139,6 +141,7 @@ parse_decl(else_statement) {
   }
   begin = out.next_token;
   out.value = std::make_unique<else_statement>(std::move(*stmnt.value));
+  return out;
 }
 
 parse_decl(basic_block) {

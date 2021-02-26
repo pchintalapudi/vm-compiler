@@ -22,7 +22,7 @@ class simple_file_stream {
             }
             replaced.push_back(string[i]);
         }
-        fprintf(file, replaced.c_str());
+        fprintf(file, "%s", replaced.c_str());
         return *this;
     }
     ~simple_file_stream() {
@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
     }
     auto src = oops_compiler::files::mmap_file::create(argv[1], strlen(argv[1]));
     if (!src) {
-        std::cerr << "Filename \"" << argv[1] << "\" does not exist!";
+        std::cerr << "Filename \"" << argv[1] << "\" does not exist!" << std::endl;
         return 1;
     }
     simple_file_stream debug_file(DEBUG_FILE);
