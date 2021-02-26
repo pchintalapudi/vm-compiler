@@ -20,7 +20,7 @@ class parameter {
 
  public:
   parameter(decltype(type) type, std::string name,
-           std::optional<std::unique_ptr<expression>> default_value)
+            std::optional<std::unique_ptr<expression>> default_value)
       : type(std::move(type)),
         name(std::move(name)),
         default_value(default_value ? std::move(*default_value)
@@ -78,30 +78,18 @@ class unparsed_method_declaration : public method_declaration {
 };
 class method_definition : public method_declaration {
  private:
-  std::optional<basic_block> body;
+  basic_block body;
 
  public:
-  method_definition(unparsed_method_declaration &&unparsed,
-                    std::optional<basic_block> parsed)
+  method_definition(unparsed_method_declaration &&unparsed, basic_block parsed)
       : method_declaration(std::move(unparsed)), body(std::move(parsed)) {}
-  const std::optional<basic_block> &get_method_body() const { return body; }
+  const basic_block &get_method_body() const { return body; }
 };
 
-class method_instantiation : public expression {
- private:
-  std::string name;
-  std::vector<const type_instantiation *> generic_instantiations;
-  std::vector<std::unique_ptr<expression>> arguments;
-
+class abstract_method : public method_declaration {
  public:
-  const std::string &get_name() const { return name; }
-  const std::vector<const type_instantiation *> &get_generic_instantiations()
-      const {
-    return generic_instantiations;
-  }
-  const std::vector<std::unique_ptr<expression>> &get_arguments() const {
-    return arguments;
-  }
+  abstract_method(unparsed_method_declaration &&unparsed)
+      : method_declaration(std::move(unparsed)) {}
 };
 }  // namespace parser
 }  // namespace oops_compiler

@@ -343,8 +343,8 @@ parse_decl(source_file) {
     out.messages.push_back(builder.build_message(logger::level::FATAL_ERROR,
                                                  tokens[begin].token_context));
   }
-  out.value = std::make_unique<source_file>(filename, std::move(imports),
-                                            std::move(package));
+  out.value = std::make_unique<source_file>(
+      filename, std::move(imports), std::move(package), std::move(*cls.value));
 }
 
 parse_decl(unparsed_method_declaration) {
@@ -1181,5 +1181,63 @@ parse_decl(class_definition) {
   out.value = std::make_unique<class_definition>(
       std::move(**decl.value), std::move(sub_classes), std::move(interfaces),
       std::move(superclass), std::move(vars), std::move(mtds));
+  return out;
+}
+
+output<char> class_definition::resolve_unparsed_methods(
+    const char *filename, std::unordered_set<std::string> &classes) {
+  output<char> out;
+  out.filename = filename;
+  classes.insert(this->decl.get_name());
+  for (auto &cls : this->sub_classes) {
+    cls->resolve_unparsed_methods(filename, classes);
+  }
+  for (auto &mtdp : this->mtds) {
+    auto &mtd = static_cast<unparsed_method_declaration &>(*mtdp);
+    if (mtd.get_tokens().size() == 1) {
+      mtdp = std::make_unique<abstract_method>(std::move(mtd));
+    } else {
+      std::unordered_set<std::string> polluted_classes = classes;
+      for (auto &cls : this->sub_classes) {
+        polluted_classes.insert(cls->decl.get_name());
+      }
+      output<basic_block> bb =
+          parse<basic_block>(filename, mtd.get_tokens(), 0, polluted_classes);
+      std::copy(bb.messages.begin(), bb.messages.end(),
+                std::back_inserter(out.messages));
+      if (!bb.value) {
+        return out;
+      }
+      mtdp = std::make_unique<method_definition>(std::move(mtd),
+                                                 std::move(**bb.value));
+    }
+  }
+  classes.erase(this->decl.get_name());
+  out.value = std::optional<std::unique_ptr<char>>{nullptr};
+  return out;
+}
+
+source_file::source_file(const char *filename,
+                         decltype(source_file::imports) imports,
+                         package_declaration package,
+                         std::unique_ptr<class_definition> main)
+    : filename(filename),
+      imports(std::move(imports)),
+      package(std::move(package)),
+      main(std::move(main)) {}
+output<char> source_file::resolve_unparsed_method_definitions() {
+  output<char> out;
+  out.filename = this->filename;
+  std::unordered_set<std::string> classes;
+  for (const auto &imp : imports) {
+    classes.insert(imp.get_alias());
+  }
+  output<char> resolved =
+      this->main->resolve_unparsed_methods(this->filename, classes);
+  std::copy(resolved.messages.begin(), resolved.messages.end(),
+            std::back_inserter(out.messages));
+  if (resolved.value) {
+    out.value = std::move(resolved.value);
+  }
   return out;
 }

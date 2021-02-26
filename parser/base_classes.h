@@ -11,6 +11,7 @@
 
 namespace oops_compiler {
 namespace parser {
+class class_definition;
 class classloader;
 class type_declaration;
 template <typename out_t>
@@ -65,17 +66,19 @@ class source_file {
   const char *filename;
   std::vector<imported_class> imports;
   package_declaration package;
+  std::unique_ptr<class_definition> main;
 
  public:
   source_file(const char *filename, decltype(source_file::imports) imports,
-              package_declaration package)
-      : filename(filename),
-        imports(std::move(imports)),
-        package(std::move(package)) {}
+              package_declaration package,
+              std::unique_ptr<class_definition> main);
   const char *get_filename() const { return filename; }
   const decltype(source_file::imports) &get_imports() const { return imports; }
 
   const package_declaration &get_package() const { return package; }
+  const class_definition &get_main() const { return *main; }
+
+  output<char> resolve_unparsed_method_definitions();
 };
 }  // namespace parser
 }  // namespace oops_compiler

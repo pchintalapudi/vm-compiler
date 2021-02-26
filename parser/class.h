@@ -42,6 +42,8 @@ class class_definition {
   }
   const decltype(vars) &variables() const { return vars; }
   const decltype(mtds) &methods() const { return mtds; }
+  output<char> resolve_unparsed_methods(
+      const char *filename, std::unordered_set<std::string> &classes);
   virtual ~class_definition() = default;
 };
 }  // namespace parser
