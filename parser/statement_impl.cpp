@@ -33,6 +33,8 @@ parse_decl(default_statement);
 parse_decl(type_instantiation);
 parse_decl(declaration);
 parse_decl(general_type);
+parse_decl(for_statement);
+parse_decl(enhanced_for_statement);
 
 parse_decl(while_statement) {
   output<while_statement> out;
@@ -895,4 +897,241 @@ parse_decl(declaration) {
 parse_decl(general_type) {
   return output<general_type>::reconstruct(
       parse<access_expression>(filename, tokens, begin, classes));
+}
+
+parse_decl(enhanced_for_statement) {
+  output<enhanced_for_statement> out;
+  out.filename = filename;
+  out.next_token = begin;
+  out.contexts.push_back(tokens[out.next_token].token_context);
+  out.next_token++;
+  out.next_token++;
+  output<general_type> type =
+      parse<general_type>(filename, tokens, out.next_token, classes);
+  std::copy(type.messages.begin(), type.messages.end(),
+            std::back_inserter(out.messages));
+  out.next_token = type.next_token;
+  std::string name(tokens[out.next_token].token_data.as_identifier.start,
+                   tokens[out.next_token].token_data.as_identifier.size);
+  out.next_token++;
+  out.next_token++;
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of enhanced for loop!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  output<expression> iterable =
+      parse<expression>(filename, tokens, out.next_token, classes);
+  std::copy(iterable.messages.begin(), iterable.messages.end(),
+            std::back_inserter(out.messages));
+  out.next_token = iterable.next_token;
+  if (!iterable.value) {
+    return out;
+  }
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of enhanced for loop!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  if (tokens[out.next_token].token_data.token_type !=
+          lexer::token::data::type::OPERATOR_TOKEN ||
+      tokens[out.next_token].token_data.as_operator !=
+          lexer::operators::ROUND_CLOSE) {
+    message_builder builder;
+    builder.builder
+        << "Expected closing parenthesis after enhanced for loop iterable!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  out.next_token++;
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of enhanced for loop!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  output<statement> block =
+      parse<statement>(filename, tokens, out.next_token, classes);
+  std::copy(block.messages.begin(), block.messages.end(),
+            std::back_inserter(out.messages));
+  out.next_token = block.next_token;
+  if (block.value) {
+    out.value = std::make_unique<enhanced_for_statement>(
+        std::move(*type.value), std::move(name), std::move(*iterable.value),
+        std::move(*block.value));
+  }
+  return out;
+}
+
+parse_decl(for_statement) {
+  output<for_statement> out;
+  out.filename = filename;
+  out.next_token = begin;
+  out.contexts.push_back(tokens[out.next_token].token_context);
+  out.next_token++;
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of enhanced for loop!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  if (tokens[out.next_token].token_data.token_type !=
+          lexer::token::data::type::OPERATOR_TOKEN ||
+      tokens[out.next_token].token_data.as_operator !=
+          lexer::operators::ROUND_OPEN) {
+    message_builder builder;
+    builder.builder << "Expected parenthesis to begin for loop header!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  out.next_token++;
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of enhanced for loop!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  std::unique_ptr<statement> decl;
+  if (tokens[out.next_token].token_data.token_type ==
+          lexer::token::data::type::IDENTIFIER_TOKEN &&
+      classes.find(
+          std::string(tokens[out.next_token].token_data.as_identifier.start,
+                      tokens[out.next_token].token_data.as_identifier.size)) !=
+          classes.end()) {
+    output<declaration> declret =
+        parse<declaration>(filename, tokens, out.next_token, classes);
+    if (declret.value) {
+      std::copy(declret.messages.begin(), declret.messages.end(),
+                std::back_inserter(out.messages));
+      out.next_token = declret.next_token - 1;
+      decl = std::move(*declret.value);
+      goto done_decl;
+    }
+  }
+  {
+    output<expression> expr =
+        parse<expression>(filename, tokens, out.next_token, classes);
+    if (expr.value) {
+      decl = std::make_unique<semicolon_statement>(std::move(*expr.value));
+      out.next_token = expr.next_token;
+    } else {
+      std::copy(expr.messages.begin(), expr.messages.end(),
+                std::back_inserter(out.messages));
+      out.next_token = expr.next_token;
+      return out;
+    }
+  }
+done_decl:
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of enhanced for loop!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  if (tokens[out.next_token].token_data.token_type !=
+          lexer::token::data::type::OPERATOR_TOKEN ||
+      tokens[out.next_token].token_data.as_operator !=
+          lexer::operators::SEMICOLON) {
+    message_builder builder;
+    builder.builder << "Expected semicolon to end for loop declaration!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  out.next_token++;
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of enhanced for loop!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  output<expression> conditional =
+      parse<expression>(filename, tokens, out.next_token, classes);
+  std::copy(conditional.messages.begin(), conditional.messages.end(),
+            std::back_inserter(out.messages));
+  out.next_token = conditional.next_token;
+  if (!conditional.value) {
+    return out;
+  }
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of enhanced for loop!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  if (tokens[out.next_token].token_data.token_type !=
+          lexer::token::data::type::OPERATOR_TOKEN ||
+      tokens[out.next_token].token_data.as_operator !=
+          lexer::operators::SEMICOLON) {
+    message_builder builder;
+    builder.builder << "Expected semicolon to end for loop declaration!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  out.next_token++;
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of enhanced for loop!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  output<expression> increment =
+      parse<expression>(filename, tokens, out.next_token, classes);
+  std::copy(increment.messages.begin(), increment.messages.end(),
+            std::back_inserter(out.messages));
+  out.next_token = increment.next_token;
+  if (!increment.value) {
+    return out;
+  }
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of enhanced for loop!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  if (tokens[out.next_token].token_data.token_type !=
+          lexer::token::data::type::OPERATOR_TOKEN ||
+      tokens[out.next_token].token_data.as_operator !=
+          lexer::operators::ROUND_CLOSE) {
+    message_builder builder;
+    builder.builder << "Expected semicolon to end for loop declaration!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  out.next_token++;
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of enhanced for loop!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  output<statement> body =
+      parse<statement>(filename, tokens, out.next_token, classes);
+  std::copy(body.messages.begin(), body.messages.end(),
+            std::back_inserter(out.messages));
+  out.next_token = body.next_token;
+  if (!body.value) {
+    return out;
+  }
+  out.value = std::make_unique<for_statement>(
+      std::move(decl), std::move(*conditional.value),
+      std::move(*increment.value), std::move(*body.value));
+  return out;
 }
