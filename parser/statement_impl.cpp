@@ -1033,7 +1033,7 @@ parse_decl(for_statement) {
 done_decl:
   if (tokens.size() == out.next_token) {
     message_builder builder;
-    builder.builder << "Unexpected end of enhanced for loop!";
+    builder.builder << "Unexpected end of for loop!";
     out.messages.push_back(builder.build_message(
         logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
     return out;
@@ -1051,7 +1051,7 @@ done_decl:
   out.next_token++;
   if (tokens.size() == out.next_token) {
     message_builder builder;
-    builder.builder << "Unexpected end of enhanced for loop!";
+    builder.builder << "Unexpected end of for loop!";
     out.messages.push_back(builder.build_message(
         logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
     return out;
@@ -1066,7 +1066,7 @@ done_decl:
   }
   if (tokens.size() == out.next_token) {
     message_builder builder;
-    builder.builder << "Unexpected end of enhanced for loop!";
+    builder.builder << "Unexpected end of for loop!";
     out.messages.push_back(builder.build_message(
         logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
     return out;
@@ -1084,7 +1084,7 @@ done_decl:
   out.next_token++;
   if (tokens.size() == out.next_token) {
     message_builder builder;
-    builder.builder << "Unexpected end of enhanced for loop!";
+    builder.builder << "Unexpected end of for loop!";
     out.messages.push_back(builder.build_message(
         logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
     return out;
@@ -1099,7 +1099,7 @@ done_decl:
   }
   if (tokens.size() == out.next_token) {
     message_builder builder;
-    builder.builder << "Unexpected end of enhanced for loop!";
+    builder.builder << "Unexpected end of for loop!";
     out.messages.push_back(builder.build_message(
         logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
     return out;
@@ -1117,7 +1117,7 @@ done_decl:
   out.next_token++;
   if (tokens.size() == out.next_token) {
     message_builder builder;
-    builder.builder << "Unexpected end of enhanced for loop!";
+    builder.builder << "Unexpected end of for loop!";
     out.messages.push_back(builder.build_message(
         logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
     return out;

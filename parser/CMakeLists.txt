@@ -16,6 +16,7 @@ loop_control.h
 method.h
 modifiers.h
 nary_expression.h
+new.h
 returns.h
 semicolon.h
 statement_impl.cpp

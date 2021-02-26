@@ -5,6 +5,7 @@
 #include "impl_common.h"
 #include "loop_control.h"
 #include "nary_expression.h"
+#include "new.h"
 #include "type.h"
 
 using namespace oops_compiler::parser;
@@ -29,6 +30,7 @@ parse_decl(prefix_expression);
 parse_decl(postfix_expression);
 parse_decl(call_expression);
 parse_decl(access_expression);
+parse_decl(new_expression);
 
 parse_decl(parenthetical) {
   output<parenthetical> out;
@@ -714,5 +716,266 @@ done:
     out.value = std::make_unique<postfix_expression>(
         postfix_expression::type::NONE, std::move(building));
   }
+  return out;
+}
+
+parse_decl(access_expression) {
+  output<access_expression> out;
+  out.filename = filename;
+  out.next_token = begin;
+  out.contexts.push_back(tokens[out.next_token].token_context);
+  std::unique_ptr<expression> start;
+  switch (tokens[out.next_token].token_data.token_type) {
+    case lexer::token::data::type::IDENTIFIER_TOKEN:
+      if (classes.find(std::string(
+              tokens[out.next_token].token_data.as_identifier.start,
+              tokens[out.next_token].token_data.as_identifier.size)) !=
+          classes.end()) {
+        output<type_instantiation> type = parse<type_instantiation>(
+            filename, tokens, out.next_token, classes);
+        std::copy(type.messages.begin(), type.messages.end(),
+                  std::back_inserter(out.messages));
+        out.next_token = type.next_token;
+        if (!type.value) {
+          return out;
+        }
+        start = std::move(*type.value);
+      } else {
+        output<identifier_expression> identifier = parse<identifier_expression>(
+            filename, tokens, out.next_token, classes);
+        std::copy(identifier.messages.begin(), identifier.messages.end(),
+                  std::back_inserter(out.messages));
+        out.next_token = identifier.next_token;
+        if (!identifier.value) {
+          return out;
+        }
+        start = std::move(*identifier.value);
+      }
+      break;
+    case lexer::token::data::type::LITERAL_TOKEN: {
+      output<literal_expression> literal =
+          parse<literal_expression>(filename, tokens, out.next_token, classes);
+      std::copy(literal.messages.begin(), literal.messages.end(),
+                std::back_inserter(out.messages));
+      out.next_token = literal.next_token;
+      if (!literal.value) {
+        return out;
+      }
+      start = std::move(*literal.value);
+      break;
+    }
+    case lexer::token::data::type::KEYWORD_TOKEN: {
+      switch (tokens[out.next_token].token_data.as_keyword) {
+        case lexer::keywords::NEW: {
+          output<new_expression> newexp =
+              parse<new_expression>(filename, tokens, out.next_token, classes);
+          std::copy(newexp.messages.begin(), newexp.messages.end(),
+                    std::back_inserter(out.messages));
+          out.next_token = newexp.next_token;
+          if (!newexp.value) {
+            return out;
+          }
+          start = std::move(*newexp.value);
+          break;
+        }
+        default: {
+          message_builder builder;
+          builder.builder << "Unexpected keyword in expression!";
+          out.messages.push_back(
+              builder.build_message(logger::level::FATAL_ERROR,
+                                    tokens[out.next_token].token_context));
+          return out;
+        }
+      }
+      break;
+    }
+    case lexer::token::data::type::OPERATOR_TOKEN: {
+      switch (tokens[out.next_token].token_data.as_operator) {
+        case lexer::operators::ROUND_OPEN: {
+          output<parenthetical> paren =
+              parse<parenthetical>(filename, tokens, out.next_token, classes);
+          std::copy(paren.messages.begin(), paren.messages.end(),
+                    std::back_inserter(out.messages));
+          out.next_token = paren.next_token;
+          if (!paren.value) {
+            return out;
+          }
+          start = std::move(*paren.value);
+          break;
+        }
+        default: {
+          message_builder builder;
+          builder.builder << "Unexpected operator in expression!";
+          out.messages.push_back(
+              builder.build_message(logger::level::FATAL_ERROR,
+                                    tokens[out.next_token].token_context));
+          return out;
+        }
+      }
+      break;
+    }
+  }
+  if (tokens.size() > out.next_token + 1 &&
+      tokens[out.next_token].token_data.token_type ==
+          lexer::token::data::type::OPERATOR_TOKEN &&
+      tokens[out.next_token].token_data.as_operator ==
+          lexer::operators::ACCESS &&
+      tokens[out.next_token + 1].token_data.token_type ==
+          lexer::token::data::type::IDENTIFIER_TOKEN) {
+    out.next_token++;
+    output<access_chain> chain =
+        parse<access_chain>(filename, tokens, out.next_token, classes);
+    std::copy(chain.messages.begin(), chain.messages.end(),
+              std::back_inserter(out.messages));
+    out.next_token = chain.next_token;
+    if (!chain.value) {
+      return out;
+    }
+    out.value = std::make_unique<access_expression>(
+        std::move(start),
+        std::optional<access_chain>{std::move(**chain.value)});
+    return out;
+  }
+  out.value = std::make_unique<access_expression>(
+      std::move(start), std::optional<access_chain>{});
+  return out;
+}
+
+parse_decl(new_expression) {
+  output<new_expression> out;
+  out.filename = filename;
+  out.next_token = begin;
+  out.contexts.push_back(tokens[out.next_token].token_context);
+  out.next_token++;
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of new expression!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  if (tokens[out.next_token].token_data.token_type !=
+          lexer::token::data::type::IDENTIFIER_TOKEN ||
+      classes.find(
+          std::string(tokens[out.next_token].token_data.as_identifier.start,
+                      tokens[out.next_token].token_data.as_identifier.size)) ==
+          classes.end()) {
+    message_builder builder;
+    builder.builder << "Expected class type to exist after new!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  output<general_type> type =
+      parse<general_type>(filename, tokens, out.next_token, classes);
+  std::copy(type.messages.begin(), type.messages.end(),
+            std::back_inserter(out.messages));
+  out.next_token = type.next_token;
+  if (!type.value) {
+    return out;
+  }
+  if (tokens.size() == out.next_token) {
+    message_builder builder;
+    builder.builder << "Unexpected end of new expression!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  if (tokens[out.next_token].token_data.token_type !=
+          lexer::token::data::type::OPERATOR_TOKEN ||
+      (tokens[out.next_token].token_data.as_operator !=
+           lexer::operators::ROUND_OPEN &&
+       tokens[out.next_token].token_data.as_operator !=
+           lexer::operators::SQUARE_OPEN)) {
+    message_builder builder;
+    builder.builder
+        << "Expected parentheses or square brackets after new class!";
+    out.messages.push_back(builder.build_message(
+        logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+    return out;
+  }
+  std::vector<std::unique_ptr<expression>> arguments;
+  bool arraytype = tokens[out.next_token].token_data.as_operator ==
+                   lexer::operators::SQUARE_OPEN;
+  if (arraytype) {
+    out.next_token++;
+    if (tokens.size() == out.next_token) {
+      message_builder builder;
+      builder.builder << "Unexpected end of new expression!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    output<expression> size =
+        parse<expression>(filename, tokens, out.next_token, classes);
+    std::copy(size.messages.begin(), size.messages.end(),
+              std::back_inserter(out.messages));
+    out.next_token = size.next_token;
+    if (!size.value) {
+      return out;
+    }
+    if (tokens.size() == out.next_token) {
+      message_builder builder;
+      builder.builder << "Unexpected end of new expression!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    if (tokens[out.next_token].token_data.token_type !=
+            lexer::token::data::type::OPERATOR_TOKEN ||
+        tokens[out.next_token].token_data.as_operator !=
+            lexer::operators::SQUARE_CLOSE) {
+      message_builder builder;
+      builder.builder << "Expected closing square bracket!";
+      out.messages.push_back(builder.build_message(
+          logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+      return out;
+    }
+    out.next_token++;
+    arguments.push_back(std::move(*size.value));
+  } else {
+    do {
+      out.next_token++;
+      if (tokens.size() == out.next_token) {
+        message_builder builder;
+        builder.builder << "Unexpected end of function call expression!";
+        out.messages.push_back(builder.build_message(
+            logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+        return out;
+      }
+      output<expression> arg =
+          parse<expression>(filename, tokens, out.next_token, classes);
+      std::copy(arg.messages.begin(), arg.messages.end(),
+                std::back_inserter(out.messages));
+      out.next_token = arg.next_token;
+      if (!arg.value) {
+        return out;
+      }
+      arguments.push_back(std::move(*arg.value));
+      if (tokens.size() == out.next_token) {
+        message_builder builder;
+        builder.builder << "Unexpected end of function call expression!";
+        out.messages.push_back(builder.build_message(
+            logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+        return out;
+      }
+      if (tokens[out.next_token].token_data.token_type !=
+              lexer::token::data::type::OPERATOR_TOKEN ||
+          (tokens[out.next_token].token_data.as_operator !=
+               lexer::operators::ROUND_CLOSE &&
+           tokens[out.next_token].token_data.as_operator !=
+               lexer::operators::COMMA)) {
+        message_builder builder;
+        builder.builder << "Unexpected token in function call expression!";
+        out.messages.push_back(builder.build_message(
+            logger::level::FATAL_ERROR, tokens[out.next_token].token_context));
+        return out;
+      }
+    } while (tokens[out.next_token].token_data.as_operator ==
+             lexer::operators::COMMA);
+    out.next_token++;
+  }
+  out.value = std::make_unique<new_expression>(std::move(*type.value),
+                                               std::move(arguments), arraytype);
   return out;
 }
