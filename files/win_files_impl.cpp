@@ -1,3 +1,5 @@
+#include "platform_selector.h"
+#ifdef OOPS_COMPILE_FOR_WINDOWS
 #include "files.h"
 #include <iostream>
 using namespace oops_compiler::files;
@@ -68,3 +70,4 @@ mmap_file &mmap_file::operator=(mmap_file &&file) {
   std::swap(this->impl, file.impl);
   return *this;
 }
+#endif

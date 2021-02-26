@@ -1,13 +1,18 @@
 #ifndef OOPS_COMPILER_FILES_H
 #define OOPS_COMPILER_FILES_H
 
-#include "win_mmap_file_impl.h"
-
 #include <cstdint>
 #include <optional>
 
 namespace oops_compiler {
 namespace files {
+
+struct mmap_file_impl {
+  void *file_handle;
+  void *file_mapping_handle;
+  void *file_view;
+  std::uintptr_t file_size;
+};
 class mmap_file {
  private:
   mmap_file_impl impl;
@@ -19,11 +24,11 @@ class mmap_file {
   mmap_file(mmap_file &&file);
   mmap_file &operator=(mmap_file &&file);
   static std::optional<mmap_file> create(const char *filename, int length);
-  const void* operator*() const;
+  const void *operator*() const;
   std::uintptr_t file_size() const;
   ~mmap_file();
 };
-}  // namespace platform
-}  // namespace oops
+}  // namespace files
+}  // namespace oops_compiler
 
 #endif
