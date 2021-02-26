@@ -3,12 +3,13 @@ PRIVATE
 access_expression.h
 base_classes.h
 basic_block.h
-class.h
 class_impl.cpp
+class.h
+classloader.h
 declaration.h
 enhanced_for.h
-expression.h
 expression_impl.cpp
+expression.h
 for.h
 ifelse.h
 impl_common.h
@@ -17,6 +18,8 @@ method.h
 modifiers.h
 nary_expression.h
 new.h
+parser.cpp
+parser.h
 returns.h
 semicolon.h
 statement_impl.cpp

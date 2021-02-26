@@ -1,6 +1,7 @@
 #ifndef OOPS_COMPILER_PARSER_BASE_CLASSES_H
 #define OOPS_COMPILER_PARSER_BASE_CLASSES_H
 
+#include <memory>
 #include <string>
 #include <unordered_set>
 #include <variant>

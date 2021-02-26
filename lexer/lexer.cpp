@@ -334,7 +334,6 @@ lexed_output lexer::lex() {
   std::cout << variables.start << " " << variables.end << std::endl;
   while (variables.start + variables.context.global_char_number <
          variables.end) {
-    std::cout << "Loop context " << variables.context.to_string() << "\n";
     if (auto op = parse_operator(
             variables.start + variables.context.global_char_number,
             variables.end, &this->root)) {

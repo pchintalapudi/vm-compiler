@@ -17,7 +17,11 @@ class operator_trie {
   operators full_operator;
   bool parent_full_operator;
   operator_trie(int depth, operator_trie *parent)
-      : parent(parent), subtries(), depth(depth), full_operator(operators::__COUNT__) {}
+      : parent(parent),
+        subtries(),
+        depth(depth),
+        full_operator(operators::__COUNT__),
+        parent_full_operator(false) {}
   void mark_parent_full();
 
  public:
@@ -40,12 +44,8 @@ class operator_trie {
 
   operator_trie *get_parent() { return parent; }
   const operator_trie *get_parent() const { return parent; }
-  operators get_operator() const {
-      return this->full_operator;
-  }
-  bool parent_full() const {
-      return this->parent_full_operator;
-  }
+  operators get_operator() const { return this->full_operator; }
+  bool parent_full() const { return this->parent_full_operator; }
 
   void get_elements(std::vector<std::string> &out, std::string &root) const {
     if (this->full_operator != operators::__COUNT__) {
