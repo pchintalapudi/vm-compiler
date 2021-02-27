@@ -9,6 +9,8 @@ namespace oops_compiler {
 namespace parser {
 struct ast_node {
   virtual std::size_t get_type_index() const = 0;
+  template <typename visitor_t>
+  void visit(visitor_t &visitor);
   virtual ~ast_node() = default;
 };
 
@@ -47,7 +49,7 @@ struct identifier : virtual ast_node, virtual visitable<identifier, ast_node> {
       : start(start), size(size), context(std::move(context)) {}
 
   std::string str() const { return std::string{start, size}; }
-  using visitable<identifier, ast_node>::get_type_index;
+  using visitable<identifier, ast_node>::visit;
 };
 }  // namespace parser
 }  // namespace oops_compiler

@@ -15,8 +15,10 @@ struct package_declaration : virtual ast_node,
   logger::context context;
   package_declaration(decltype(path) path, decltype(context) context)
       : path(std::move(path)), context(std::move(context)) {}
+  using visitable<package_declaration, ast_node>::visit;
 };
-struct import_declaration : virtual ast_node, virtual visitable<import_declaration, ast_node> {
+struct import_declaration : virtual ast_node,
+                            virtual visitable<import_declaration, ast_node> {
   std::unique_ptr<identifier> alias;
   std::vector<std::unique_ptr<identifier>> path;
   logger::context context;
@@ -25,8 +27,10 @@ struct import_declaration : virtual ast_node, virtual visitable<import_declarati
       : alias(std::move(alias)),
         path(std::move(path)),
         context(std::move(context)) {}
+  using visitable<import_declaration, ast_node>::visit;
 };
-struct source_file : virtual ast_node, virtual visitable<source_file, ast_node> {
+struct source_file : virtual ast_node,
+                     virtual visitable<source_file, ast_node> {
   std::string filename;
   std::unique_ptr<package_declaration> package;
   std::vector<std::unique_ptr<import_declaration>> imports;
@@ -37,6 +41,7 @@ struct source_file : virtual ast_node, virtual visitable<source_file, ast_node> 
         package(std::move(package)),
         imports(std::move(imports)),
         cls(std::move(cls)) {}
+  using visitable<source_file, ast_node>::visit;
 };
 }  // namespace parser
 }  // namespace oops_compiler

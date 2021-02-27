@@ -11,4 +11,5 @@ source_file.h
 statement.h
 token_stream.h
 type.h
+type_parse_impl.cpp
 )

@@ -38,6 +38,7 @@ struct class_variable : virtual ast_node,
         name(std::move(name)),
         initializer(std::move(initializer)),
         context(std::move(context)) {}
+  using visitable<class_variable, ast_node>::visit;
 };
 struct parameter : virtual ast_node, virtual visitable<parameter, ast_node> {
   std::unique_ptr<general_type> type;
@@ -47,6 +48,7 @@ struct parameter : virtual ast_node, virtual visitable<parameter, ast_node> {
       : type(std::move(type)),
         name(std::move(name)),
         context(std::move(context)) {}
+  using visitable<parameter, ast_node>::visit;
 };
 struct class_method : virtual ast_node,
                       virtual visitable<class_method, ast_node> {
@@ -78,6 +80,7 @@ struct class_method : virtual ast_node,
         is_intrinsic(std::move(is_intrinsic)),
         is_abstract(std::move(is_abstract)),
         context(std::move(context)) {}
+  using visitable<class_method, ast_node>::visit;
 };
 struct class_definition : virtual ast_node,
                           virtual visitable<class_definition, ast_node> {
@@ -94,6 +97,7 @@ struct class_definition : virtual ast_node,
         methods(std::move(methods)),
         inner_classes(std::move(inner_classes)),
         context(std::move(context)) {}
+  using visitable<class_definition, ast_node>::visit;
 };
 }  // namespace parser
 }  // namespace oops_compiler

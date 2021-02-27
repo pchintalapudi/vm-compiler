@@ -18,7 +18,7 @@ typedef std::tuple<identifier, class_variable, parameter, class_method,
                    type_instantiation, general_type>
     ast_node_types;
 template <typename t, std::size_t... indices>
-constexpr std::size_t index_of(std::index_sequence<indices...>) {
+constexpr std::size_t index_of_ast_type(std::index_sequence<indices...>) {
   return ~0ull +
          ((std::is_same_v<t, std::tuple_element_t<indices, ast_node_types>>
                ? indices + 1
@@ -26,18 +26,26 @@ constexpr std::size_t index_of(std::index_sequence<indices...>) {
           ...);
 }
 
+template <typename t>
+constexpr std::size_t index_of_ast_type_v = index_of_ast_type<t>(
+    std::make_index_sequence<std::tuple_size_v<ast_node_types>>());
+
 template <typename self_t, typename base_t>
 std::size_t visitable<self_t, base_t>::get_type_index() const {
-  static_assert(
-      index_of<self_t>(
-          std::make_index_sequence<std::tuple_size_v<ast_node_types>>()) !=
-      ~0ull);
-  return index_of<self_t>(
-      std::make_index_sequence<std::tuple_size_v<ast_node_types>>());
+  static_assert(index_of_ast_type_v<self_t> != ~0ull);
+  return index_of_ast_type_v<self_t>;
 }
 
 template <typename func_t>
 using ast_visitor = visitor<ast_node_types, func_t>;
+
+template <typename visitor_t>
+void ast_node::visit(visitor_t &visitor) {
+  switch (this->get_type_index()) {
+    case index_of_ast_type_v<identifier>:
+      static_cast<identifier *>(this)->visit(visitor);
+  }
+}
 }  // namespace parser
 }  // namespace oops_compiler
 
