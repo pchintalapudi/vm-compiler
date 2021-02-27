@@ -1,5 +1,6 @@
 #include "base.h"
 #include "output.h"
+#include "node_type.h"
 
 using namespace oops_compiler::parser;
 

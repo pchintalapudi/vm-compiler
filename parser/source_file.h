@@ -9,13 +9,14 @@
 
 namespace oops_compiler {
 namespace parser {
-struct package_declaration : ast_node {
+struct package_declaration : virtual ast_node,
+                             virtual visitable<package_declaration, ast_node> {
   std::vector<std::unique_ptr<identifier>> path;
   logger::context context;
   package_declaration(decltype(path) path, decltype(context) context)
       : path(std::move(path)), context(std::move(context)) {}
 };
-struct import_declaration : ast_node {
+struct import_declaration : virtual ast_node, virtual visitable<import_declaration, ast_node> {
   std::unique_ptr<identifier> alias;
   std::vector<std::unique_ptr<identifier>> path;
   logger::context context;
@@ -25,7 +26,7 @@ struct import_declaration : ast_node {
         path(std::move(path)),
         context(std::move(context)) {}
 };
-struct source_file : ast_node {
+struct source_file : virtual ast_node, virtual visitable<source_file, ast_node> {
   std::string filename;
   std::unique_ptr<package_declaration> package;
   std::vector<std::unique_ptr<import_declaration>> imports;

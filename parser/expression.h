@@ -5,7 +5,7 @@
 
 namespace oops_compiler {
 namespace parser {
-struct expression : ast_node {};
+struct expression : virtual ast_node {};
 }  // namespace parser
 }  // namespace oops_compiler
 

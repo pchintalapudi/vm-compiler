@@ -2,6 +2,7 @@
 #include "class.h"
 #include "output.h"
 #include "source_file.h"
+#include "node_type.h"
 
 using namespace oops_compiler::parser;
 

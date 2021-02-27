@@ -7,7 +7,7 @@ namespace oops_compiler {
 namespace parser {
 struct statement : ast_node {};
 
-struct basic_block {};
+struct basic_block : statement {};
 }  // namespace parser
 }  // namespace oops_compiler
 

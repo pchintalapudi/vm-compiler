@@ -5,6 +5,7 @@ base_parse_impl.cpp
 class.h
 class_parse_impl.cpp
 expression.h
+node_type.h
 output.h
 source_file.h
 statement.h

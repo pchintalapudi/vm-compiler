@@ -18,7 +18,8 @@ struct expression;
 struct type_declaration;
 struct basic_block;
 enum class access { PUBLIC, PROTECTED, PACKAGE, PRIVATE };
-struct class_variable : ast_node {
+struct class_variable : virtual ast_node,
+                        virtual visitable<class_variable, ast_node> {
   access modifier;
   bool is_static;
   bool is_final;
@@ -38,7 +39,7 @@ struct class_variable : ast_node {
         initializer(std::move(initializer)),
         context(std::move(context)) {}
 };
-struct parameter : ast_node {
+struct parameter : virtual ast_node, virtual visitable<parameter, ast_node> {
   std::unique_ptr<general_type> type;
   std::unique_ptr<identifier> name;
   logger::context context;
@@ -47,7 +48,8 @@ struct parameter : ast_node {
         name(std::move(name)),
         context(std::move(context)) {}
 };
-struct class_method : ast_node {
+struct class_method : virtual ast_node,
+                      virtual visitable<class_method, ast_node> {
   std::unique_ptr<general_type> return_type;
   std::unique_ptr<type_declaration> declaration;
   std::vector<std::unique_ptr<parameter>> parameters;
@@ -77,7 +79,8 @@ struct class_method : ast_node {
         is_abstract(std::move(is_abstract)),
         context(std::move(context)) {}
 };
-struct class_definition : ast_node {
+struct class_definition : virtual ast_node,
+                          virtual visitable<class_definition, ast_node> {
   std::unique_ptr<type_declaration> declaration;
   std::vector<std::unique_ptr<class_variable>> variables;
   std::vector<std::unique_ptr<class_method>> methods;
