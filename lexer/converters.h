@@ -69,6 +69,7 @@ enum class keywords {
   CASE,
   CATCH,
   CLASS,
+  CONST,
   CONSTRUCTOR,
   CONTINUE,
   DEFAULT,
@@ -83,6 +84,7 @@ enum class keywords {
   GET,
   GOTO,
   IF,
+  IN,
   IS,
   IMPORT,
   IMPLEMENTS,
@@ -103,7 +105,9 @@ enum class keywords {
   THROW,
   TRY,
   USING,
+  VAR,
   WHILE,
+  WITH,
   __COUNT__
 };
 

@@ -6,7 +6,6 @@
 
 #include "files/files.h"
 #include "lexer/lexer.h"
-#include "parser/parser.h"
 
 class simple_file_stream {
  private:
@@ -66,13 +65,7 @@ int main(int argc, char **argv) {
   debug_file << ",";
   debug_file << "\"parsed\":";
   debug_file << "{";
-  oops_compiler::parser::parser parser(out.filename, out.output);
-  oops_compiler::parser::output<char> parsed = parser.parse();
   debug_file << "\"messages\": [";
-  for (const auto &message : parsed.messages) {
-    std::cout << message.to_string() << std::endl;
-    debug_file << message.to_string() << ",";
-  }
   debug_file << "]";
   debug_file << "}";
   debug_file << "}";

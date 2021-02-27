@@ -1,3 +1,13 @@
 target_sources(oops-compiler
 PRIVATE
+base.h
+base_parse_impl.cpp
+class.h
+class_parse_impl.cpp
+expression.h
+output.h
+source_file.h
+statement.h
+token_stream.h
+type.h
 )

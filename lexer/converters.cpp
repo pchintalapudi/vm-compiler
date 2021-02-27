@@ -86,6 +86,7 @@ mappings::mappings() {
     map_keyword(keywords::CASE, "case");
     map_keyword(keywords::CATCH, "catch");
     map_keyword(keywords::CLASS, "class");
+    map_keyword(keywords::CONST, "const");
     map_keyword(keywords::CONSTRUCTOR, "constructor");
     map_keyword(keywords::CONTINUE, "continue");
     map_keyword(keywords::DEFAULT, "default");
@@ -100,6 +101,7 @@ mappings::mappings() {
     map_keyword(keywords::GET, "get");
     map_keyword(keywords::GOTO, "goto");
     map_keyword(keywords::IF, "if");
+    map_keyword(keywords::IN, "in");
     map_keyword(keywords::IS, "is");
     map_keyword(keywords::IMPORT, "import");
     map_keyword(keywords::IMPLEMENTS, "implements");
@@ -120,7 +122,9 @@ mappings::mappings() {
     map_keyword(keywords::THROW, "throw");
     map_keyword(keywords::TRY, "try");
     map_keyword(keywords::USING, "using");
+    map_keyword(keywords::VAR, "var");
     map_keyword(keywords::WHILE, "while");
+    map_keyword(keywords::WITH, "with");
     current_line_number(keywords_end);
     constexpr std::size_t keyword_count = keywords_end - keywords_start - 1;
     static_assert(keyword_count ==

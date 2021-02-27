@@ -49,6 +49,8 @@ struct context {
   }
 
   std::string to_string() const;
+
+  static constexpr context NONE() { return {nullptr, nullptr, -1, -1, -1}; }
 };
 
 struct message {
