@@ -42,8 +42,26 @@ using ast_visitor = visitor<ast_node_types, func_t>;
 template <typename visitor_t>
 void ast_node::visit(visitor_t &visitor) {
   switch (this->get_type_index()) {
-    case index_of_ast_type_v<identifier>:
-      static_cast<identifier *>(this)->visit(visitor);
+#define is(type)                                                      \
+  case index_of_ast_type_v<type>:                                     \
+    static_cast<type *>(this)->visit(visitor);                        \
+    static_assert(__LINE__ - start == 1 + index_of_ast_type_v<type>); \
+    break
+    constexpr std::size_t start = __LINE__;
+    is(identifier);
+    is(class_variable);
+    is(parameter);
+    is(class_method);
+    is(class_definition);
+    is(package_declaration);
+    is(import_declaration);
+    is(source_file);
+    is(basic_block);
+    is(type_declaration);
+    is(type_instantiation);
+    is(general_type);
+    static_assert(__LINE__ - start == std::tuple_size_v<ast_node_types> + 1);
+#undef is
   }
 }
 }  // namespace parser
