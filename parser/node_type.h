@@ -15,7 +15,7 @@ namespace parser {
 typedef std::tuple<identifier, class_variable, parameter, class_method,
                    class_definition, package_declaration, import_declaration,
                    source_file, basic_block, type_declaration,
-                   type_instantiation, general_type>
+                   type_instantiation, general_type, generic_bound>
     ast_node_types;
 template <typename t, std::size_t... indices>
 constexpr std::size_t index_of_ast_type(std::index_sequence<indices...>) {
@@ -60,6 +60,7 @@ void ast_node::visit(visitor_t &visitor) {
     is(type_declaration);
     is(type_instantiation);
     is(general_type);
+    is(generic_bound);
     static_assert(__LINE__ - start == std::tuple_size_v<ast_node_types> + 1);
 #undef is
   }
